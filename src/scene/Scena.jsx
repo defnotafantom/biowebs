@@ -19,11 +19,11 @@ import { schermo, scena } from '../lib/schermo'
    ═══════════════════════════════════════════════════════════════ */
 
 const INQUADRATURE = [
-  { z: 22.5, y: 0.15 },   // apertura — l'elica intera, con aria attorno
-  { z: 12.0, y: 0.00 },   // metodo
-  { z: 12.0, y: 0.00 },   // composizione
-  { z: 12.0, y: 0.00 },   // aree
-  { z: 21.0, y: 0.00 },   // prenota — torna l'elica, serve distanza
+  { z: 13.6, y: 0.15 },   // apertura — l'elica da vicino, che deborda
+  { z: 12.0, y: 0.00 },   // chi sono
+  { z: 12.0, y: 0.00 },   // strumentazione
+  { z: 12.0, y: 0.00 },   // condizioni
+  { z: 15.5, y: 0.00 },   // prenota e recensioni — torna l'elica
 ]
 
 const TANG = Math.tan((34 / 2) * Math.PI / 180)
@@ -44,8 +44,17 @@ function Telecamera() {
       z = Math.max(16, 6.2 / (2 * TANG * aspetto))
       y = 0
     } else if (cap === 0) {
-      /* nell'apertura si arretra da dentro la nuvola di punti */
-      z = mescola(17.5, INQUADRATURE[0].z, morbida(clamp(scroll.q / 0.8)))
+      /* L'apertura ADDOSSA, non arretra. Prima faceva il contrario:
+         partiva a 17,5 e andava a 22,5 per far stare tutta l'elica
+         dentro il fotogramma. Ma un'elica che ci sta tutta comoda è
+         un logo, e da lontano il filamento davanti e quello dietro
+         distano uguale — cioè non c'è profondità.
+
+         Adesso si va da diciotto e mezzo, dove il campo sparso è
+         costruito, a tredici e sei, dove l'elica esce sopra e sotto
+         e i due filamenti stanno a cinque unità di scarto su tredici
+         di distanza. È lì che si vede chi è davanti e chi è dietro. */
+      z = mescola(18.5, INQUADRATURE[0].z, morbida(clamp(scroll.q / 0.72)))
       y = mescola(-0.5, INQUADRATURE[0].y, q)
     } else {
       const A = INQUADRATURE[Math.min(INQUADRATURE.length - 1, cap)]
