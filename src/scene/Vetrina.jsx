@@ -78,15 +78,31 @@ export default function Vetrina() {
      ciclo di disegno vorrebbe dire ricompilare uno shader per
      fotogramma, che è il modo più veloce per fare inginocchiare
      una scheda grafica */
+  /* Il verde scurissimo di prima era un errore che si spiega da
+     solo: colonna quasi nera su fondo quasi nero, in una scena
+     dove l'unica luce forte è quella che deve uscire dal cuscino.
+     A cursore fermo la vetrina non si vedeva proprio — non era
+     "poco visibile", era invisibile, e infatti il committente ha
+     detto che non c'era niente.
+
+     Adesso è pietra chiara. Una colonna da museo non è nera: è
+     travertino, e sta lì apposta perché la si veda anche quando
+     sopra non c'è niente. */
   const matColonna = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#1A2B22', roughness: 0.42, metalness: 0.05,
-    clearcoat: 0.5, clearcoatRoughness: 0.35, envMapIntensity: 0.9,
+    color: '#6E7B6A', roughness: 0.62, metalness: 0.02,
+    clearcoat: 0.28, clearcoatRoughness: 0.5, envMapIntensity: 1.5,
   }), [])
 
   const matCuscino = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#3A1E14', roughness: 0.95, metalness: 0,
-    sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color('#C6702E'),
-    envMapIntensity: 0.5,
+    color: '#8E3F1C', roughness: 0.92, metalness: 0,
+    sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#FF9A4E'),
+    envMapIntensity: 1.1,
+  }), [])
+
+  /* un filo di luce sul bordo del collarino: è il dettaglio che
+     stacca la colonna dal fondo senza doverla illuminare tutta */
+  const matFilo0 = useMemo(() => new THREE.MeshBasicMaterial({
+    color: '#FFC177', transparent: true, opacity: 0.55,
   }), [])
 
   /* L'ologramma: emissivo, semitrasparente, e senza scrittura sul
@@ -95,9 +111,9 @@ export default function Vetrina() {
      a seconda dell'ordine in cui capita di disegnarli, e l'oggetto
      lampeggia mentre gira. */
   const matOlo = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#FFB44E', emissive: new THREE.Color('#FF9A2E'), emissiveIntensity: 0.8,
+    color: '#FFB44E', emissive: new THREE.Color('#FF9A2E'), emissiveIntensity: 1.1,
     roughness: 0.3, metalness: 0.1,
-    transparent: true, opacity: 0.2, depthWrite: false,
+    transparent: true, opacity: 0.3, depthWrite: false,
     blending: THREE.AdditiveBlending,
   }), [])
 
@@ -105,7 +121,7 @@ export default function Vetrina() {
      come proiezione e non come oggetto di plastica arancione */
   const matFilo = useMemo(() => new THREE.MeshBasicMaterial({
     color: '#FFE2B4', wireframe: true,
-    transparent: true, opacity: 0.34, depthWrite: false,
+    transparent: true, opacity: 0.42, depthWrite: false,
     blending: THREE.AdditiveBlending,
   }), [])
 
@@ -129,7 +145,10 @@ export default function Vetrina() {
 
   const matFascio = useMemo(() => new THREE.MeshBasicMaterial({
     color: LUCE, vertexColors: true,
-    transparent: true, opacity: 0.05,
+    /* Il fascio si vede sempre, anche senza niente dentro: è
+       quello che dice "qui sopra ci va qualcosa". Con l'oggetto
+       acceso raddoppia. */
+    transparent: true, opacity: 0.09,
     depthWrite: false, side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
   }), [])
@@ -192,14 +211,14 @@ export default function Vetrina() {
       fascio.current.scale.set(acceso, 1, acceso)
       /* il tremolio: un fascio perfettamente stabile sembra un
          solido, uno che respira sembra luce nell'aria */
-      fascio.current.material.opacity = (0.022 + 0.030 * v) * presenza
+      fascio.current.material.opacity = (0.055 + 0.055 * v) * presenza
         * (0.84 + Math.sin(tempo * 1.7) * 0.16)
     }
     if (alone.current) {
-      alone.current.material.opacity = (0.16 + 0.26 * v) * presenza
+      alone.current.material.opacity = (0.34 + 0.34 * v) * presenza
     }
     if (lampada.current) {
-      lampada.current.intensity = (5 + 20 * v) * presenza
+      lampada.current.intensity = (16 + 26 * v) * presenza
     }
 
     /* ── l'insieme ── */
@@ -227,6 +246,15 @@ export default function Vetrina() {
       <mesh position={[0, -0.06, 0]} material={matColonna}>
         <cylinderGeometry args={[0.78, 0.68, 0.14, 40, 1]} />
       </mesh>
+      {/* il filo di luce sul bordo */}
+      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]} material={matFilo0}>
+        <ringGeometry args={[0.74, 0.79, 48]} />
+      </mesh>
+
+      {/* Una luce dedicata alla colonna. Le luci della scena sono
+          tarate sulle sfere, che stanno molto più avanti: qui
+          arrivava un terzo di niente e la pietra restava grigia. */}
+      <pointLight position={[-2.2, 2.4, 3.2]} color="#FFE3BC" distance={12} intensity={26} />
 
       {/* ── il cuscino ── */}
       <mesh position={[0, 0.05, 0]} material={matCuscino}>

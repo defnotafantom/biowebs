@@ -93,17 +93,45 @@ function raduno(s, cap, q) {
   return 0
 }
 
-/* Quanto è salita verso l'alto. Nel primo capitolo la struttura
-   scorre fuori dall'inquadratura dal basso verso l'alto: di lei
-   resta visibile la coda, in alto a destra, e si capisce che è la
-   stessa cosa di prima vista da più giù. */
-function salita(cap, q) {
+/* IL TAGLIO — quanto la struttura viene coperta dal basso.
+
+   Nel primo capitolo l'elica NON si muove. Prima la facevo salire
+   fuori inquadratura, e il risultato era che si staccava dalla
+   base e volava via: sembrava che l'oggetto se ne andasse, mentre
+   quello che deve succedere è che il contenuto arrivi.
+
+   Adesso resta esattamente dov'era e viene tagliata da un piano
+   orizzontale che sale fino al bordo alto del blocco di testo. È
+   come se la sezione, pur essendo trasparente, la coprisse: netto,
+   dritto, e simmetrico rispetto alla colonna del testo. Quello che
+   sta sotto non si sfuma — non c'è. */
+function taglio(cap, q) {
   if (cap !== 1) return 0
-  return morbida(fascia(q, 0.02, 0.52))
+  return morbida(fascia(q, 0.0, 0.34))
 }
 
-/* quanto dura la comparsa di una singola sfera, in unità di arrivo */
-const NASCITA = 0.11
+/* Dove cade il taglio, in frazione dell'altezza dello schermo dal
+   bordo alto. Il blocco di testo del capitolo 01 comincia più o
+   meno a un quinto dall'alto. */
+const ALTEZZA_TAGLIO = 0.21
+
+/* Quanto dura la comparsa di una singola sfera. Da 0,11 a 0,26:
+   più del doppio, perché comparire deve essere un viaggio e non
+   un'accensione. */
+const NASCITA = 0.26
+
+/* Da quanto lontano arriva una sfera appena nata.
+   È il numero che risolve il difetto peggiore dell'apertura: le
+   sfere sembravano spuntare dal nulla. Nascevano al loro posto e
+   crescevano da misura zero — e una cosa che cresce sul posto non
+   è arrivata, è APPARSA, e l'occhio se ne accorge subito.
+
+   Adesso nascono ventotto unità più indietro, cioè ben oltre il
+   fondo della nebbia, e vengono avanti mentre crescono. Non c'è
+   nessun momento in cui appaiono: escono dal verde scuro come
+   escono le cose dalla nebbia vera, e quando le vedi si stanno
+   già muovendo da un pezzo. */
+const DA_LONTANO = 28
 
 /* riutilizzati a ogni fotogramma per i bastoncini: allocarli dentro
    il ciclo vorrebbe dire creare oggetti sessanta volte al secondo */
@@ -121,6 +149,13 @@ export default function ElicaScena({ mouse }) {
   const rete = useRef()
   const barre = useRef()
   const inclina = useRef({ x: 0, z: 0 })
+
+  /* Il piano che taglia. Si costruisce una volta e non si sostituisce
+     mai: cambiare l'ELENCO dei piani di un materiale lo obbliga a
+     ricompilare lo shader, cambiarne la posizione no. Quando non
+     serve tagliare lo si manda mille unità sotto, dove non incontra
+     niente. */
+  const piano = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 1000), [])
 
   const dati = useMemo(() => costruisciElica(quantita()), [])
   const n = dati.n
@@ -157,6 +192,18 @@ export default function ElicaScena({ mouse }) {
   useLayoutEffect(() => {
     const m = rete.current
     if (!m) return
+    /* Assegnare i piani non basta: three costruisce lo shader in
+       base a QUANTI piani ci sono, e se il numero cambia dopo la
+       creazione bisogna dirglielo. Senza needsUpdate il taglio
+       semplicemente non avviene, e non c'è nessun errore da
+       leggere — è il tipo di riga che si scopre solo chiedendosi
+       perché una cosa non succede. */
+    m.material.clippingPlanes = [piano]
+    m.material.needsUpdate = true
+    if (barre.current) {
+      barre.current.material.clippingPlanes = [piano]
+      barre.current.material.needsUpdate = true
+    }
     m.instanceMatrix.array.fill(0)
     const c = new THREE.Color()
     for (let i = 0; i < n; i++) {
@@ -172,7 +219,7 @@ export default function ElicaScena({ mouse }) {
       for (let i = 0; i < PIOLI; i++) bb.setColorAt(i, PAGLIA)
       if (bb.instanceColor) bb.instanceColor.needsUpdate = true
     }
-  }, [n, base])
+  }, [n, base, piano])
 
   useFrame(({ clock }, dt) => {
     const m = rete.current
@@ -182,7 +229,7 @@ export default function ElicaScena({ mouse }) {
     const cap = scroll.capitolo
     const r = raduno(scroll.schermate, cap, scroll.q)
     const a = arrivo(scroll.schermate, cap)
-    const su = salita(cap, scroll.q)
+    const tg = taglio(cap, scroll.q) * r
     /* Verso il fondale: le sfere disperse non tornano dove erano
        all'inizio ma in un campo diverso, con la fascia centrale
        vuota. È lo stesso disordine, sistemato in modo da non
@@ -225,15 +272,23 @@ export default function ElicaScena({ mouse }) {
          rendering; con un respiro di 0,07 sembra tenuta insieme
          da qualcosa. È la differenza fra ferma e viva. */
       const vita = 0.26 * (1 - t) + 0.07
-      const fuori = 1 + (1 - vn) * 0.16
+      /* mentre nasce sta un po' più larga e MOLTO più indietro:
+         viene avanti attraversando la nebbia */
+      const fuori = 1 + (1 - vn) * 0.22
+      const dietro = (1 - vn) * DA_LONTANO
       const px = (ax * w0 + cx * w1 + bx * w2) * fuori + Math.sin(tempo * 0.5 + fase[i]) * vita
       const py = (ay * w0 + cy * w1 + by * w2) * fuori + Math.cos(tempo * 0.42 + fase[i]) * vita
-      const pz = (az * w0 + cz * w1 + bz * w2) * fuori + Math.sin(tempo * 0.46 + fase[i] * 1.4) * vita
+      const pz = (az * w0 + cz * w1 + bz * w2) * fuori - dietro + Math.sin(tempo * 0.46 + fase[i] * 1.4) * vita
 
       /* Da fondale le sfere sono poco più di metà: devono esserci
          e non farsi notare. È l'unica cosa che le distingue dalle
          stesse sfere dell'apertura, dove riempivano lo schermo. */
-      const s = misura[i] * vn * mescola(0.58, 1, r)
+      /* La misura non parte da zero ma dal settanta per cento: a
+         quella distanza è comunque un puntino nella nebbia, e non
+         serve rimpicciolirla anche. Se parte da zero, il momento
+         in cui diventa visibile è anche il momento in cui è più
+         piccola, e si legge come "pop". */
+      const s = misura[i] * mescola(0.7, 1, vn) * mescola(0.58, 1, r)
       mat[o] = s; mat[o + 5] = s; mat[o + 10] = s
       mat[o + 12] = px; mat[o + 13] = py; mat[o + 14] = pz
     }
@@ -286,6 +341,14 @@ export default function ElicaScena({ mouse }) {
     gr.rotation.x = inclina.current.x
     gr.rotation.z = inclina.current.z
 
+    /* ── il taglio ──────────────────────────────────────────────
+       Il piano sale fino al bordo alto del blocco di testo. La
+       quota si ricava dall'altezza inquadrata, non è un numero
+       fisso: cambiando la distanza della telecamera o la forma
+       dello schermo, il taglio resta dov'è rispetto al testo. */
+    const quota = (0.5 - ALTEZZA_TAGLIO) * scena.altezza
+    piano.constant = tg > 0.001 ? -mescola(-scena.altezza, quota, tg) : 1000
+
     const kx = 1 - Math.exp(-dt * 2)
 
     /* Lo spostamento a destra segue il raduno: da sparse stanno al
@@ -300,10 +363,8 @@ export default function ElicaScena({ mouse }) {
        centrale vuota invece di stare tutto da una parte. */
     const bx2 = schermo.stretto ? 0 : 2.7 * r
 
-    /* La salita è moltiplicata per il raduno: mentre la struttura
-       si scioglie ridiscende, e i pezzi si spargono sul fotogramma
-       invece di restare ammucchiati fuori campo. */
-    const by = scena.alto + 9.2 * su * r
+    /* Non si muove più: resta dove l'apertura l'ha lasciata. */
+    const by = scena.alto
     const bs = schermo.stretto ? mescola(1, 0.40, r) : 1
 
     gr.position.x += (bx2 - gr.position.x) * kx

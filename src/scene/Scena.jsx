@@ -103,6 +103,10 @@ export default function Scena({ mouse }) {
       dpr={schermo.leggero ? [1, 1.5] : [1, 2]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       camera={{ position: [0, -0.5, 17.5], fov: 34 }}
+      /* Serve per il taglio netto dell'elica nel capitolo 01: senza
+         questa riga i piani di ritaglio dei materiali sono ignorati
+         e non se ne accorge nessuno, perché non è un errore. */
+      onCreated={({ gl }) => { gl.localClippingEnabled = true }}
       style={{ position: 'fixed', inset: 0, zIndex: 0 }}
     >
       <color attach="background" args={['#04120D']} />
