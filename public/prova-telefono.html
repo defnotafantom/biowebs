@@ -1,0 +1,19 @@
+<!DOCTYPE html><html lang="it"><head><meta charset="utf-8">
+<title>Prova telefono</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+ body{margin:0;background:#111;display:flex;gap:24px;padding:20px;font:12px system-ui;color:#888}
+ figure{margin:0;display:grid;gap:6px}
+ iframe{border:1px solid #333;border-radius:12px;background:#04120D}
+</style></head><body>
+<figure><figcaption>iPhone 14 · 390×844</figcaption>
+<iframe src="/" width="390" height="844" id="a"></iframe></figure>
+<figure><figcaption>iPhone SE · 375×667</figcaption>
+<iframe src="/" width="375" height="667" id="b"></iframe></figure>
+<figure><figcaption>iPad · 768×1024</figcaption>
+<iframe src="/" width="768" height="1024" id="c"></iframe></figure>
+<script>
+ window.vai = (s) => { for (const f of document.querySelectorAll('iframe'))
+   f.contentWindow.scrollTo(0, f.contentWindow.innerHeight * s) }
+</script>
+</body></html>

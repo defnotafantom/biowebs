@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Una sola pagina, per ora. Quando aggiungeremo gli approfondimenti
+     (colon irritabile, dimagrimento, sport, nutrizione clinica) vanno
+     elencati qui, uno <url> per ciascuno. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.antoniotoscanonutrizionista.it/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

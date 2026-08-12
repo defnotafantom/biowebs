@@ -1,0 +1,41 @@
+# Configurazione per Netlify.
+# Non va toccata: Netlify la legge da sola quando colleghi il progetto.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# I file con l'impronta nel nome (index-a1b2c3.js) non cambiano mai:
+# si possono tenere in cache per un anno. La pagina invece va
+# ricontrollata ogni volta, altrimenti le modifiche non si vedono.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Il sito è una pagina sola: qualsiasi indirizzo riporta lì.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

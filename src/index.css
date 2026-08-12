@@ -1,0 +1,1314 @@
+/* ═══════════════════════════════════════════════════════════════
+   PASSO 6
+   La scena sta fissa dietro. Qui c'è ciò che le scorre sopra.
+
+   Tre regole che tengono insieme tutto:
+   · una sola misura di base (il filetto) e una sola scala tipografica
+   · niente riquadri pieni: linee sottili, spazio, e il buio dietro
+   · il movimento è sempre lo stesso — 18px verso l'alto, scaglionati
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --crema: #EFEDE2;
+  --ocra: #E8A33A;
+  --fondo: #04120D;
+  --filo: rgba(239, 237, 226, 0.14);
+  --filo-forte: rgba(239, 237, 226, 0.3);
+  /* Tre soli livelli di grigio, non sei. Prima c'era una scala di
+     opacità dal 26% al 100% e il risultato era che una cosa gridava
+     e tutto il resto sussurrava: mancava il livello di mezzo, quello
+     che si legge davvero. */
+  --tenue: rgba(239, 237, 226, 0.62);
+  --testo: rgba(239, 237, 226, 0.82);
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", monospace;
+  --curva: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--fondo); }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--crema);
+  font-family: "Inter Tight", "Inter", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+canvas { display: block; touch-action: pan-y; }
+::selection { background: var(--ocra); color: var(--fondo); }
+
+/* ─────────────────────────────────────────────
+   griglia di riferimento — appena percettibile,
+   ma è ciò che fa sembrare la pagina "costruita"
+   ───────────────────────────────────────────── */
+
+.reticolo {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none;
+  width: min(92vw, 1180px);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.reticolo span { border-left: 1px solid rgba(239, 237, 226, 0.045); }
+.reticolo span:first-child { border-left: 0; }
+
+/* ─────────────────────────────────────────────
+   elementi comuni
+   ───────────────────────────────────────────── */
+
+.tag {
+  display: inline-flex; align-items: center; gap: 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--tenue);
+}
+.tag i { font-style: normal; color: var(--ocra); }
+
+.linea {
+  display: block; height: 1px; margin-top: 1.1rem;
+  background: var(--filo);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 1.1s var(--curva) 0.1s;
+}
+.sez.dentro .linea { transform: scaleX(1); }
+
+.titolo {
+  margin: 1.1rem 0 0;
+  font-weight: 500; letter-spacing: -0.045em; line-height: 0.94;
+  font-size: clamp(1.8rem, 3.0vw, 2.75rem);
+  max-width: 17ch;
+  text-wrap: balance;
+}
+.titolo-largo { max-width: 22ch; }
+
+.corpo {
+  margin: 1.1rem 0 0; max-width: min(42ch, var(--colonna));
+  color: var(--testo); line-height: 1.62; font-size: 1.12rem;
+}
+
+.filigrana {
+  position: absolute;
+  top: 50%; right: 4%;
+  transform: translateY(-50%);
+  font-size: clamp(14rem, 34vw, 30rem);
+  font-weight: 500; letter-spacing: -0.06em; line-height: 0.8;
+  color: rgba(239, 237, 226, 0.022);
+  pointer-events: none; user-select: none; z-index: -1;
+}
+
+.aiuto {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  margin: 1.2rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.74rem; letter-spacing: 0.08em;
+  color: rgba(239, 237, 226, 0.5);
+}
+.aiuto em { font-style: normal; color: var(--tenue); }
+
+/* la riga in fondo che dice i limiti di ciò che si è appena visto:
+   deve esserci, e deve pesare meno di tutto il resto */
+.nota-piccola {
+  margin: 0.8rem 0 0; max-width: 34rem;
+  font-size: 0.8rem; line-height: 1.55;
+  color: rgba(239, 237, 226, 0.42);
+}
+.pallino {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--ocra);
+  animation: pulsa 2.4s ease-in-out infinite;
+}
+@keyframes pulsa { 0%, 100% { opacity: 1 } 50% { opacity: 0.25 } }
+
+/* entrate scaglionate: una sola regola per tutto il sito */
+.entra {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.6s var(--curva), transform 0.6s var(--curva);
+  transition-delay: calc(var(--i, 0) * 55ms);
+}
+.sez.dentro .entra { opacity: 1; transform: none; }
+
+/* ─────────────────────────────────────────────
+   pulsanti
+   ───────────────────────────────────────────── */
+
+.btn {
+  position: relative; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+  height: 3.2rem; padding: 0 1.8rem; border-radius: 100px;
+  border: 1px solid transparent;
+  font-size: 0.92rem; font-weight: 500; letter-spacing: -0.01em;
+  cursor: pointer; text-decoration: none;
+  transition: color 0.35s var(--curva), border-color 0.35s, transform 0.25s;
+}
+.btn::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--crema);
+  transform: scaleX(0); transform-origin: right;
+  transition: transform 0.5s var(--curva);
+}
+.btn > * { position: relative; z-index: 1; }
+.btn:hover::before { transform: scaleX(1); transform-origin: left; }
+.btn:hover { color: var(--fondo); }
+.btn-pieno { background: var(--ocra); color: #06251B; }
+.btn-linea { border-color: var(--filo-forte); color: var(--crema); }
+.btn:active { transform: scale(0.985); }
+
+
+/* ─────────────────────────────────────────────
+   intestazione — c'è dal primo fotogramma
+   ───────────────────────────────────────────── */
+
+.testata {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem;
+  width: min(92vw, 1180px); margin-inline: auto;
+  padding: 1.5rem 0 0;
+  pointer-events: none;
+}
+.testata a { pointer-events: auto; text-decoration: none; }
+/* arrivati alla parte scritta in fondo, l'intestazione si toglie
+   di mezzo: è fissa, e altrimenti resterebbe sopra il testo */
+.testata.via { opacity: 0; pointer-events: none; transform: translateY(-8px); }
+.testata { transition: opacity 0.4s var(--curva), transform 0.4s var(--curva); }
+
+.testata-marchio { display: inline-flex; align-items: center; gap: 0.75rem; }
+
+/* tre trattini che si scalano come i pioli dell'elica:
+   il marchio in miniatura, senza dover caricare un'immagine */
+.testata-segno { display: grid; gap: 3px; }
+.testata-segno i {
+  display: block; height: 1.5px; background: var(--ocra);
+  border-radius: 2px; transition: width 0.5s var(--curva);
+}
+.testata-segno i:nth-child(1) { width: 9px; }
+.testata-segno i:nth-child(2) { width: 15px; }
+.testata-segno i:nth-child(3) { width: 11px; }
+.testata-marchio:hover .testata-segno i:nth-child(1) { width: 15px; }
+.testata-marchio:hover .testata-segno i:nth-child(2) { width: 9px; }
+.testata-marchio:hover .testata-segno i:nth-child(3) { width: 15px; }
+
+.testata-testo { display: grid; gap: 2px; line-height: 1.1; }
+.testata-testo b {
+  font-size: 0.86rem; font-weight: 500; letter-spacing: -0.015em;
+  color: var(--crema);
+}
+.testata-testo em {
+  font-style: normal; font-family: var(--mono);
+  font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.36);
+}
+
+.testata-tel {
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.1em; color: rgba(239, 237, 226, 0.5);
+  padding: 0.5rem 0.9rem; border: 1px solid var(--filo); border-radius: 100px;
+  transition: color 0.3s, border-color 0.3s;
+}
+.testata-tel:hover { color: var(--crema); border-color: var(--filo-forte); }
+
+/* ─────────────────────────────────────────────
+   apertura
+   ───────────────────────────────────────────── */
+
+.apertura {
+  position: fixed; inset: 0; z-index: 10;
+  pointer-events: none; display: flex; align-items: center;
+}
+.apertura-centro { position: relative; width: min(92vw, 1180px); margin-inline: auto; }
+.battuta {
+  position: absolute; top: 50%; left: 0;
+  transform: translateY(-50%);
+  will-change: opacity, transform;
+  /* Il font-size sta QUI, non sugli span, e non è un dettaglio:
+     "ch" si misura sul carattere del contenitore. Con il font-size
+     solo sui figli, 14ch valeva 120 px invece di 537 e il titolo
+     andava a capo a ogni parola. */
+  font-size: clamp(2.2rem, 4.6vw, 4.4rem);
+  max-width: 13ch;
+}
+.battuta-riga, .battuta-forte {
+  display: block; font-weight: 500;
+  letter-spacing: -0.045em; line-height: 0.94;
+  font-size: 1em;
+}
+.battuta-riga { color: rgba(239, 237, 226, 0.55); }
+.battuta-forte { color: var(--crema); }
+/* La firma ha il doppio delle parole delle altre due battute, quindi
+   non può avere la stessa misura: con 3,9rem "Biologo Nutrizionista"
+   occupava mezzo schermo e schiacciava tutto il resto. */
+.battuta-firma { max-width: 17ch; font-size: clamp(1.6rem, 2.9vw, 2.6rem); }
+.battuta-h1 { margin: 0; font-weight: inherit; }
+.battuta-firma .battuta-riga {
+  font-size: 0.56em;
+  color: rgba(239, 237, 226, 0.5); letter-spacing: -0.03em;
+}
+.battuta-firma .battuta-forte { font-size: 1em; }
+.battuta-coda {
+  display: block; margin-top: 1.4rem;
+  font-family: var(--mono); font-size: 0.7rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--tenue);
+}
+
+.guida {
+  position: absolute; left: 50%; bottom: 5vh; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.9rem;
+  will-change: opacity;
+}
+.guida-testo {
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.24em; text-transform: uppercase; color: var(--tenue);
+}
+.guida-linea {
+  width: 1px; height: 54px; position: relative; overflow: hidden;
+  background: linear-gradient(to bottom, rgba(239, 237, 226, 0.4), transparent);
+}
+.guida-linea::after {
+  content: ""; position: absolute; inset-inline: 0; height: 16px; background: var(--ocra);
+  animation: scendi 2.1s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+}
+@keyframes scendi {
+  0% { top: -18px; opacity: 0 } 22% { opacity: 1 }
+  78% { opacity: 1 } 100% { top: 56px; opacity: 0 }
+}
+
+.salta {
+  position: absolute; right: 6vw; bottom: 5vh;
+  pointer-events: auto;
+  background: transparent; border: 1px solid var(--filo);
+  border-radius: 100px; color: rgba(239, 237, 226, 0.7);
+  font: inherit; font-size: 0.78rem; padding: 0.7rem 1.3rem;
+  cursor: pointer; will-change: opacity;
+  transition: border-color 0.3s, color 0.3s, background 0.3s;
+}
+.salta:hover { border-color: var(--crema); background: var(--crema); color: var(--fondo); }
+
+/* ─────────────────────────────────────────────
+   impianto delle sezioni
+   ───────────────────────────────────────────── */
+
+.strato { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+
+.sez {
+  position: absolute; inset: 0;
+  display: flex; align-items: center;
+  will-change: opacity, transform;
+}
+.sez-corpo {
+  position: relative;
+  width: min(92vw, 1180px); margin-inline: auto;
+  /* la colonna di testo: oltre questa misura arriverebbe sotto
+     il disegno, che sta a destra. Verificato in pixel, non a occhio. */
+  --colonna: 33rem;
+}
+/* Restringere il contenitore lo faceva ricentrare, e la sezione 02
+   finiva a metà schermo invece che a sinistra come le altre.
+   Si restringe la colonna di testo, non la scatola che la contiene. */
+.sez-stretto { --colonna: 27rem; }
+.sez-mezzo .sez-corpo { margin-inline: auto; }
+
+/* ─────────────────────────────────────────────
+   01 · strumenti
+   ───────────────────────────────────────────── */
+
+.strumenti { list-style: none; margin: 1.8rem 0 0; padding: 0; max-width: var(--colonna); }
+
+.strumenti li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.15rem 1.2rem;
+  padding: 0.95rem 1rem 0.95rem 0.9rem;
+  border-top: 1px solid var(--filo);
+  cursor: default; outline: none;
+  transition: opacity 0.4s var(--curva);
+}
+.strumenti li:last-child { border-bottom: 1px solid var(--filo); }
+/* Prima le voci non attive andavano al 34% e sembravano
+   disattivate. La differenza fra "questa è accesa" e "questa no"
+   deve stare nell'ocra della sigla, nel filetto e nel riempimento
+   — non nello spegnere il testo. Chi legge deve poter leggere
+   tutte e cinque le voci anche senza toccarne nessuna. */
+.strumenti li.spento .str-breve { color: rgba(239, 237, 226, 0.78); }
+.strumenti li.spento .str-sigla { color: rgba(239, 237, 226, 0.34); }
+.strumenti li.spento .str-nome,
+.strumenti li.spento .str-misura { opacity: 0.62; }
+.strumenti li.acceso .str-sigla { color: var(--ocra); }
+.strumenti li.acceso .str-breve { color: var(--crema); }
+
+/* il riempimento che scorre da sinistra al passaggio del mouse */
+.riempi {
+  position: absolute; inset: 0;
+  background: rgba(239, 237, 226, 0.055);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.55s var(--curva);
+  pointer-events: none;
+}
+.strumenti li.acceso .riempi,
+.percorsi li:hover .riempi,
+.percorsi li.aperta .riempi { transform: scaleX(1); }
+
+.str-sigla {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em;
+  color: var(--ocra); position: relative;
+  transition: color 0.35s;
+}
+.str-testo { position: relative; }
+.str-breve {
+  display: block; font-size: 0.98rem; letter-spacing: -0.02em;
+}
+/* i nomi degli apparecchi: erano al limite del leggibile */
+.str-nome {
+  display: block; margin-top: 0.15rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  color: rgba(239, 237, 226, 0.38);
+}
+.str-misura {
+  position: relative;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em;
+  color: rgba(239, 237, 226, 0.3);
+  transition: color 0.35s;
+  justify-self: end;
+}
+.strumenti li.acceso .str-misura { color: var(--ocra); }
+
+/* la nota estesa si apre solo sulla riga accesa */
+.str-nota {
+  position: relative;
+  grid-column: 2 / -1;
+  overflow: hidden;
+  max-height: 0; opacity: 0;
+  font-size: 0.86rem; line-height: 1.5; color: var(--testo);
+  transition: max-height 0.55s var(--curva), opacity 0.4s, margin-top 0.5s var(--curva);
+}
+.strumenti li.acceso .str-nota {
+  max-height: 5rem; opacity: 1; margin-top: 0.55rem;
+}
+
+/* ─────────────────────────────────────────────
+   02 · composizione
+   ───────────────────────────────────────────── */
+
+.quadro {
+  margin-top: 1.6rem; max-width: var(--colonna); padding: 1.6rem 1.7rem 1.5rem;
+  border: 1px solid var(--filo); border-radius: 18px;
+  background: rgba(4, 18, 13, 0.55);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+.quadro-alto {
+  display: flex; align-items: baseline; gap: 0.7rem;
+  padding-bottom: 1.2rem; border-bottom: 1px solid var(--filo);
+}
+.quadro-e, .quadro-f {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.36);
+}
+.quadro-n {
+  font-size: 2rem; font-weight: 500; letter-spacing: -0.04em; line-height: 1;
+  margin-inline: auto 0;
+}
+.quadro-n i {
+  font-style: normal; font-size: 0.9rem; margin-left: 0.25rem;
+  color: rgba(239, 237, 226, 0.4);
+}
+
+.barra {
+  display: flex; height: 6px; border-radius: 99px; overflow: hidden;
+  margin-top: 1.3rem; background: rgba(239, 237, 226, 0.08);
+}
+.barra span { display: block; transition: width 0.45s var(--curva); }
+.barra-magra { background: rgba(239, 237, 226, 0.72); }
+.barra-grassa { background: var(--ocra); }
+
+.letture { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 1.2rem; }
+.lettura-e {
+  display: block; font-family: var(--mono);
+  font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.4);
+}
+.lettura-n {
+  display: block; margin-top: 0.4rem;
+  font-size: 1.7rem; font-weight: 500; letter-spacing: -0.04em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lettura-n i { font-style: normal; font-size: 0.72rem; margin-left: 0.2rem; opacity: 0.45; }
+.lettura-grassa { text-align: right; }
+.lettura-grassa .lettura-n { color: var(--ocra); }
+
+.cursore { display: block; margin-top: 1.1rem; }
+.cursore-e {
+  display: flex; justify-content: space-between; margin-bottom: 0.8rem;
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--tenue);
+}
+.cursore-e b { color: var(--ocra); font-weight: 400; }
+/* Il cursore ha due misure diverse, e vanno tenute separate:
+   l'area da afferrare col pollice è alta 44 px, la riga che si vede
+   è alta 2. Mettendo il gradiente sullo sfondo dell'input, alzare
+   l'area faceva diventare la riga una fascia arancione alta come
+   un pulsante. La riga va disegnata sulla "traccia", non sull'input. */
+.cursore input {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 44px; outline: none; cursor: pointer;
+  background: transparent; margin: 0;
+}
+.cursore input::-webkit-slider-runnable-track {
+  height: 2px; border-radius: 99px;
+  background: linear-gradient(to right, var(--ocra) var(--p), rgba(239, 237, 226, 0.16) var(--p));
+}
+.cursore input::-moz-range-track {
+  height: 2px; border-radius: 99px;
+  background: linear-gradient(to right, var(--ocra) var(--p), rgba(239, 237, 226, 0.16) var(--p));
+}
+.cursore input::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; margin-top: -9px;
+  border-radius: 50%;
+  background: var(--ocra); border: 3px solid var(--fondo);
+  box-shadow: 0 0 0 1px var(--ocra); cursor: grab;
+  transition: transform 0.2s;
+}
+.cursore input:active::-webkit-slider-thumb { transform: scale(1.15); }
+.cursore input::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--ocra); border: 3px solid var(--fondo);
+}
+
+.verdetto {
+  margin: 1.4rem 0 0; padding-left: 0.9rem;
+  border-left: 1px solid var(--ocra);
+  font-size: 0.98rem; line-height: 1.5; color: var(--testo);
+  min-height: 2.6rem;
+}
+
+/* ─────────────────────────────────────────────
+   03 · percorsi
+   ───────────────────────────────────────────── */
+
+.percorsi { list-style: none; margin: 1.8rem 0 0; padding: 0; max-width: var(--colonna); }
+.percorsi > li { border-top: 1px solid var(--filo); }
+.percorsi > li:last-child { border-bottom: 1px solid var(--filo); }
+
+.percorso-testa {
+  position: relative; width: 100%;
+  display: grid; grid-template-columns: 3.4rem minmax(0, 1fr) 2rem;
+  align-items: center; gap: 1rem;
+  padding: 1.05rem 1rem 1.05rem 0.9rem;
+  background: none; border: 0; color: inherit; font: inherit;
+  text-align: left; cursor: pointer;
+}
+.percorso-n {
+  position: relative;
+  font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.1em; color: var(--ocra);
+}
+.percorso-corpo { position: relative; }
+.percorso-t {
+  display: block; font-size: clamp(1.02rem, 1.9vw, 1.28rem);
+  letter-spacing: -0.028em; font-weight: 500;
+}
+.percorso-nota {
+  display: block; margin-top: 0.2rem;
+  font-size: 0.82rem; color: rgba(239, 237, 226, 0.42);
+}
+
+.piu { position: relative; width: 14px; height: 14px; justify-self: end; }
+.piu i {
+  position: absolute; background: var(--tenue);
+  transition: transform 0.45s var(--curva), background 0.3s;
+}
+.piu i:nth-child(1) { inset: 6px 0 auto 0; height: 1px; }
+.piu i:nth-child(2) { inset: 0 6px 0 auto; width: 1px; }
+.percorsi li.aperta .piu i:nth-child(2) { transform: scaleY(0); }
+.percorsi li.aperta .piu i { background: var(--ocra); }
+
+.percorso-dentro {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.55s var(--curva);
+}
+.percorsi li.aperta .percorso-dentro { grid-template-rows: 1fr; }
+.percorso-dentro > ul {
+  overflow: hidden; list-style: none; margin: 0;
+  padding: 0 1rem 0 5.3rem;
+}
+.percorsi li.aperta .percorso-dentro > ul { padding-bottom: 1.1rem; }
+.percorso-dentro li {
+  position: relative; padding: 0.3rem 0 0.3rem 1.1rem;
+  font-size: 0.86rem; color: var(--testo);
+}
+.percorso-dentro li::before {
+  content: ""; position: absolute; left: 0; top: 0.95em;
+  width: 6px; height: 1px; background: var(--ocra); opacity: 0.6;
+}
+
+/* ─────────────────────────────────────────────
+   04 · prenota
+   ───────────────────────────────────────────── */
+
+.carta {
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  gap: 2.4rem; align-items: center;
+  margin-top: 2.2rem; padding: 1.7rem 1.9rem;
+  border: 1px solid var(--filo); border-radius: 18px;
+  background: rgba(4, 18, 13, 0.5);
+  backdrop-filter: blur(6px);
+  max-width: var(--colonna);
+}
+.carta-prezzo { display: flex; align-items: flex-start; gap: 0.3rem; position: relative; }
+.carta-n {
+  font-size: clamp(3.2rem, 7vw, 4.6rem); font-weight: 500;
+  letter-spacing: -0.055em; line-height: 0.85; color: var(--ocra);
+}
+.carta-v { font-size: 1.1rem; color: var(--ocra); margin-top: 0.3rem; }
+.carta-d {
+  position: absolute; bottom: -1.3rem; left: 0; white-space: nowrap;
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.36);
+}
+.carta-incluso { list-style: none; margin: 0; padding: 0; }
+.carta-incluso li {
+  position: relative; padding: 0.28rem 0 0.28rem 1.2rem;
+  font-size: 0.88rem; color: var(--testo);
+}
+.carta-incluso li::before {
+  content: ""; position: absolute; left: 0; top: 0.95em;
+  width: 7px; height: 1px; background: var(--ocra);
+}
+
+.azioni { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 2rem; pointer-events: auto; }
+
+.chiusura {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-top: 2rem;
+  font-family: var(--mono); font-size: 0.64rem;
+  letter-spacing: 0.11em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.32);
+}
+
+/* ─────────────────────────────────────────────
+   indice laterale
+   ───────────────────────────────────────────── */
+
+/* L'indice sta a sinistra, non a destra: è lì che l'occhio torna
+   dopo ogni riga, ed è il posto in cui si cerca un sommario. E i
+   nomi si vedono sempre, non solo al passaggio del mouse — serve
+   a saltare, e uno strumento per saltare deve dire dove porta. */
+.indice {
+  position: fixed; left: 1.6vw; top: 50%; transform: translateY(-50%);
+  z-index: 15; display: flex; flex-direction: row-reverse;
+  align-items: center; gap: 0.9rem;
+}
+.indice ul {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.indice ul { gap: 0.7rem; }
+.indice button {
+  display: flex; flex-direction: row-reverse; align-items: center;
+  justify-content: flex-end; gap: 0.7rem;
+  background: none; border: 0; padding: 0.25rem 0; cursor: pointer;
+  color: rgba(239, 237, 226, 0.5);
+  transition: color 0.4s var(--curva);
+}
+.indice button:hover, .indice button.attivo { color: var(--crema); }
+.indice-nome {
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+  opacity: 0.7; transition: opacity 0.4s var(--curva);
+}
+.indice button.attivo .indice-nome { opacity: 1; }
+.indice-trattino {
+  display: block; width: 20px; height: 1px; background: currentColor;
+  transition: width 0.4s var(--curva), background 0.4s;
+}
+.indice button.attivo .indice-trattino { width: 36px; background: var(--ocra); }
+
+.indice-traccia {
+  position: relative; width: 1px; height: 150px; order: 0;
+  background: rgba(239, 237, 226, 0.1); order: 2;
+}
+.indice-barra {
+  position: absolute; inset: 0; background: rgba(239, 237, 226, 0.55);
+  transform-origin: top; transform: scaleY(0);
+}
+
+
+
+/* ─────────────────────────────────────────────
+   01 · chi sono — testo a sinistra, ritratto e
+   contatti a destra, sulla stessa riga
+   ───────────────────────────────────────────── */
+
+.chi-riga {
+  display: grid; align-items: start; gap: clamp(1.6rem, 4vw, 3.5rem);
+  grid-template-columns: minmax(0, 1fr) clamp(230px, 24vw, 310px);
+}
+.chi-lato { display: grid; gap: 1.4rem; }
+
+/* Il posto del ritratto: dichiarato, non riempito. Meglio uno
+   spazio che si vede che una foto che stona col resto. */
+.chi-vuoto {
+  margin: 0; aspect-ratio: 4 / 5; border-radius: 14px;
+  border: 1px dashed var(--filo);
+  display: grid; place-items: center;
+  background: rgba(239, 237, 226, 0.015);
+}
+.chi-vuoto span {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--filo); opacity: 0.6;
+}
+
+.chi-blocco { display: grid; gap: 0.5rem; }
+.chi-e {
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ocra);
+}
+.chi-verifiche, .chi-contatti { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.chi-verifiche li { font-size: 0.9rem; color: var(--testo); }
+.chi-verifiche a, .chi-contatti a {
+  color: var(--crema); text-decoration: none;
+  border-bottom: 1px solid var(--filo); width: fit-content;
+  transition: border-color 0.3s;
+}
+.chi-verifiche a:hover, .chi-contatti a:hover { border-color: var(--ocra); }
+.chi-contatti li { font-size: 0.88rem; }
+
+/* ─────────────────────────────────────────────
+   04 · prenota — le quattro prestazioni
+   ───────────────────────────────────────────── */
+
+/* Le quattro prestazioni erano riquadri affiancati alti duecento
+   pixel. Messe in colonna come righe di listino occupano meno di
+   metà spazio e si confrontano meglio: i prezzi finiscono
+   incolonnati uno sotto l'altro invece che sparsi. */
+.prezzi { display: flex; flex-direction: column; gap: 0.4rem; }
+.prezzo {
+  display: grid; text-align: left;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "n e" "d e";
+  align-items: center; column-gap: 1rem;
+  padding: 0.5rem 0.9rem; border-radius: 11px;
+  border: 1px solid var(--filo); background: rgba(239, 237, 226, 0.02);
+  color: inherit; font: inherit; cursor: pointer;
+  transition: border-color 0.25s var(--curva), background 0.25s var(--curva);
+}
+.prezzo:hover { border-color: var(--filo-forte); }
+.prezzo.su { border-color: var(--ocra); background: rgba(232, 163, 58, 0.08); }
+.prezzo-n { grid-area: n; font-size: 0.92rem; font-weight: 500; color: var(--testo); }
+.prezzo.su .prezzo-n { color: var(--crema); }
+.prezzo-d {
+  grid-area: d;
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.1em; color: rgba(239, 237, 226, 0.45);
+}
+.prezzo-e { grid-area: e; font-size: 1.1rem; color: var(--ocra); }
+.pren-compreso {
+  margin: 0.1rem 0 0; font-size: 0.76rem; line-height: 1.5;
+  color: rgba(239, 237, 226, 0.42);
+}
+
+/* ─────────────────────────────────────────────
+   04 · prenota
+   Due colonne: a sinistra QUANDO, a destra CHI.
+   Non tre passi in fila con i pulsanti "avanti": ogni passo in
+   più è gente che se ne va. Qui si vede tutto insieme e si
+   riempiono cinque caselle.
+   ───────────────────────────────────────────── */
+
+.pren {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: 1.4rem 3rem;
+  margin: 1.5rem 0 0;
+  align-items: start;
+}
+.pren-col { display: flex; flex-direction: column; gap: 0.6rem; }
+.pren-t + * { margin-top: -0.15rem; }
+.pren-col .pren-t:not(:first-child) { margin-top: 0.5rem; }
+
+.pren-t {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(232, 163, 58, 0.75);
+}
+
+/* i posti liberi: tre, non trenta */
+.posti { display: flex; flex-direction: column; gap: 0.45rem; }
+
+.posto {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding: 0.62rem 0.9rem;
+  border: 1px solid var(--filo); border-radius: 12px;
+  background: rgba(239, 237, 226, 0.02);
+  color: var(--testo); text-align: left; cursor: pointer;
+  transition: border-color 0.25s var(--curva), background 0.25s var(--curva);
+}
+.posto:hover { border-color: var(--filo-forte); }
+.posto.su { border-color: var(--ocra); background: rgba(232, 163, 58, 0.08); }
+.posto-g { font-size: 0.95rem; }
+.posto.su .posto-g { color: var(--crema); }
+.posto-o { font-family: var(--mono); font-size: 0.95rem; color: var(--ocra); }
+.posto-altro { justify-content: flex-start; }
+.posto-altro .posto-g { font-size: 0.86rem; color: var(--tenue); }
+
+.pren-aiuto {
+  margin: 0; font-size: 0.8rem; line-height: 1.5;
+  color: rgba(239, 237, 226, 0.5);
+}
+
+
+/* il modulo */
+.campo { display: flex; flex-direction: column; gap: 0.28rem; }
+.campo-e {
+  font-family: var(--mono);
+  font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.35);
+}
+.campo input,
+.campo textarea {
+  width: 100%; padding: 0.6rem 0.8rem;
+  border: 1px solid var(--filo); border-radius: 10px;
+  background: rgba(239, 237, 226, 0.03);
+  color: var(--crema);
+  font: inherit; font-size: 0.94rem;
+  transition: border-color 0.25s var(--curva), background 0.25s var(--curva);
+}
+.campo textarea { resize: none; line-height: 1.45; }
+.campo textarea::placeholder { color: rgba(239, 237, 226, 0.3); }
+.campo input:focus,
+.campo textarea:focus {
+  outline: none; border-color: var(--ocra);
+  background: rgba(239, 237, 226, 0.055);
+}
+/* L'errore compare solo dopo che si è usciti dal campo: segnalarlo
+   mentre uno sta ancora scrivendo il proprio nome è maleducato. */
+.campo.male input { border-color: rgba(226, 92, 66, 0.6); }
+.campo-male { font-size: 0.74rem; color: rgba(226, 92, 66, 0.85); }
+
+.campi-due { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+
+.consenso {
+  display: flex; align-items: flex-start; gap: 0.55rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.79rem; line-height: 1.45;
+  color: rgba(239, 237, 226, 0.55);
+  cursor: pointer;
+}
+.consenso input { margin-top: 0.18em; accent-color: var(--ocra); width: 15px; height: 15px; }
+
+.pren-invio { align-self: flex-start; margin-top: 0.2rem; }
+.pren-invio:disabled { opacity: 0.4; cursor: default; }
+.pren-guasto { margin: 0; font-size: 0.82rem; color: rgba(226, 92, 66, 0.9); }
+.pren-nota {
+  margin: 0; font-size: 0.78rem; line-height: 1.5;
+  color: rgba(239, 237, 226, 0.4);
+}
+
+/* la schermata di conferma prende il posto di tutto il resto */
+.fatto {
+  margin: 2rem 0 0; max-width: 36rem;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.9rem;
+}
+.fatto-t {
+  margin: 0; font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  font-weight: 500; letter-spacing: -0.03em; color: var(--ocra);
+}
+.fatto-p { margin: 0; font-size: 1.02rem; line-height: 1.6; color: var(--testo); }
+
+@media (max-width: 900px) {
+  .pren { grid-template-columns: 1fr; gap: 1.2rem; }
+  .campi-due { grid-template-columns: 1fr; }
+}
+
+/* Su un portatile da tredici pollici questa sezione è l'unica che
+   non ci sta: ha un listino, tre orari e cinque caselle, mentre le
+   altre hanno un titolo e un elenco. Invece di rimpicciolire tutto
+   il sito per colpa di una sezione, qui si toglie il paragrafo
+   d'introduzione — che ripete quello che dice il listino — e si
+   stringono le imbottiture. Sopra gli 820 pixel non cambia nulla. */
+@media (max-height: 820px) {
+  #prenota .titolo { font-size: clamp(1.45rem, 2.2vw, 2rem); }
+  #prenota .corpo { display: none; }
+  #prenota .pren { margin-top: 1.2rem; }
+  #prenota .prezzo { padding: 0.42rem 0.85rem; }
+  #prenota .prezzo-e { font-size: 1rem; }
+  #prenota .posto { padding: 0.48rem 0.85rem; }
+  #prenota .campo input,
+  #prenota .campo textarea { padding: 0.46rem 0.75rem; font-size: 0.9rem; }
+  #prenota .pren-col { gap: 0.5rem; }
+  #prenota .btn { height: 2.8rem; }
+}
+
+/* ─────────────────────────────────────────────
+   05 · recensioni — una per volta, con i pallini
+   ───────────────────────────────────────────── */
+
+.rec {
+  margin-top: 1.6rem; padding: 1.3rem 1.4rem;
+  border: 1px solid var(--filo); border-radius: 14px;
+  background: rgba(4, 18, 13, 0.5);
+}
+.rec-alto { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+.rec-stelle { color: var(--ocra); letter-spacing: 0.12em; font-size: 0.9rem; }
+.rec-chi { font-size: 1rem; font-weight: 500; }
+.rec-ver {
+  font-family: var(--mono); font-size: 0.56rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(239, 237, 226, 0.4); margin-inline: auto 0;
+}
+.rec-testo { margin: 0.9rem 0 0; font-size: 0.95rem; line-height: 1.6; color: var(--testo); }
+.rec-quando {
+  display: block; margin-top: 0.9rem;
+  font-family: var(--mono); font-size: 0.58rem;
+  letter-spacing: 0.1em; color: rgba(239, 237, 226, 0.35);
+}
+.rec-punti { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+.rec-punti button {
+  width: 26px; height: 3px; border: 0; padding: 0; border-radius: 3px;
+  background: var(--filo); cursor: pointer; transition: background 0.3s;
+}
+.rec-punti button.su { background: var(--ocra); }
+.rec-fonte {
+  margin-inline: auto 0; font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.1em; color: rgba(239, 237, 226, 0.45); text-decoration: none;
+}
+.rec-fonte:hover { color: var(--crema); }
+
+/* ─────────────────────────────────────────────
+   i titoli di studio
+   ───────────────────────────────────────────── */
+
+.titoli {
+  list-style: none; margin: 1.4rem 0 0; padding: 1rem 0 0;
+  border-top: 1px solid var(--filo);
+  display: grid; gap: 1rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.titoli li { display: grid; gap: 0.15rem; }
+.titoli-e {
+  font-family: var(--mono); font-size: 0.64rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ocra);
+}
+.titoli-t { font-size: 1.1rem; color: var(--crema); }
+.titoli-n { font-size: 0.86rem; color: rgba(239, 237, 226, 0.52); }
+
+/* ─────────────────────────────────────────────
+   le recensioni
+   ───────────────────────────────────────────── */
+
+.voci { margin-top: 1.6rem; }
+.voci-tit {
+  display: block; margin-bottom: 0.9rem;
+  font-family: var(--mono); font-size: 0.66rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ocra);
+}
+.voci-griglia {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.voci blockquote {
+  margin: 0; padding: 0 0 0 0.9rem;
+  border-left: 1px solid var(--filo);
+}
+.voci blockquote p {
+  margin: 0; font-size: 0.94rem; line-height: 1.5;
+  color: var(--testo);
+}
+/* le virgolette aperte in ocra: dicono "questa è voce di un altro"
+   senza bisogno di scriverlo */
+.voci blockquote p::before { content: "\201C"; color: var(--ocra); margin-right: 1px; }
+.voci blockquote p::after { content: "\201D"; color: var(--ocra); margin-left: 1px; }
+.voci cite {
+  display: block; margin-top: 0.6rem; font-style: normal;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em;
+  color: rgba(239, 237, 226, 0.45);
+}
+.voci cite i {
+  font-style: normal; display: block; margin-top: 2px;
+  color: rgba(239, 237, 226, 0.3);
+}
+.voci-avviso {
+  margin: 1rem 0 0; font-family: var(--mono);
+  font-size: 0.6rem; letter-spacing: 0.08em;
+  color: var(--ocra); opacity: 0.75;
+}
+.voci-avviso code { font-size: 0.6rem; }
+
+/* ─────────────────────────────────────────────
+   pastiglie e scheda — l'impianto del tocco
+   ───────────────────────────────────────────── */
+
+.pastiglie {
+  display: flex; gap: 0.5rem; margin-top: 1rem;
+  overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 0.3rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.pastiglie::-webkit-scrollbar { display: none; }
+.pastiglie button {
+  flex: 0 0 auto; scroll-snap-align: start;
+  min-height: 42px; padding: 0 1.05rem;
+  border-radius: 100px; border: 1px solid var(--filo);
+  background: transparent; color: rgba(239, 237, 226, 0.55);
+  font: inherit; font-size: 0.9rem; letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: color 0.3s var(--curva), border-color 0.3s, background 0.3s;
+}
+.pastiglie button.su {
+  color: #06251B; background: var(--ocra); border-color: var(--ocra);
+}
+
+.scheda {
+  margin-top: 0.9rem; padding: 1rem 1.1rem 1.1rem;
+  border: 1px solid var(--filo); border-radius: 14px;
+  background: rgba(4, 18, 13, 0.55);
+}
+.scheda-alto { display: flex; align-items: baseline; gap: 0.7rem; justify-content: space-between; }
+.scheda-alto b { font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; }
+.scheda-alto i {
+  font-style: normal; font-family: var(--mono); font-size: 0.55rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ocra); text-align: right; flex: 0 0 auto;
+}
+.scheda-nome {
+  display: block; margin-top: 0.2rem;
+  font-family: var(--mono); font-size: 0.62rem;
+  letter-spacing: 0.08em; color: rgba(239, 237, 226, 0.4);
+}
+.scheda-nota {
+  margin: 0.8rem 0 0; font-size: 1rem; line-height: 1.55;
+  color: var(--testo);
+}
+.scheda-elenco { list-style: none; margin: 0.8rem 0 0; padding: 0; }
+.scheda-elenco li {
+  position: relative; padding: 0.3rem 0 0.3rem 1rem;
+  font-size: 0.95rem; color: var(--testo);
+}
+.scheda-elenco li::before {
+  content: ""; position: absolute; left: 0; top: 0.95em;
+  width: 6px; height: 1px; background: var(--ocra);
+}
+
+/* ─────────────────────────────────────────────
+   la barra fissa del telefono — due gesti, sempre
+   ───────────────────────────────────────────── */
+
+.azione-fissa { display: none; }
+
+/* ─────────────────────────────────────────────
+   la chiusura — testo vero, in flusso normale
+   ───────────────────────────────────────────── */
+
+.chiusa {
+  position: relative; z-index: 12;
+  background: var(--fondo);
+  border-top: 1px solid var(--filo);
+  padding: clamp(3.5rem, 8vw, 7rem) 0 3rem;
+}
+/* una sfumatura sopra il bordo: la scena non si taglia di netto */
+.chiusa::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 100%;
+  height: 22vh; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--fondo));
+}
+.chiusa-dentro { width: min(92vw, 1180px); margin-inline: auto; }
+.chiusa-blocco { margin-bottom: clamp(2.6rem, 5vw, 4.5rem); }
+
+.chiusa-titolo {
+  margin: 0 0 1rem;
+  font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+  font-weight: 500; letter-spacing: -0.03em;
+}
+.chiusa-testo { margin: 0 0 2.2rem; max-width: 52ch; color: var(--testo); line-height: 1.55; }
+
+.chiusa-griglia {
+  display: grid; gap: 1.8rem 2.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.chiusa-gruppo h3 {
+  margin: 0 0 0.7rem; padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--filo);
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ocra);
+}
+.chiusa-gruppo ul { list-style: none; margin: 0; padding: 0; }
+.chiusa-gruppo li {
+  padding: 0.3rem 0; font-size: 0.94rem; line-height: 1.45;
+  color: rgba(239, 237, 226, 0.74);
+}
+
+.chiusa-due { display: grid; gap: 2.6rem; grid-template-columns: 1.25fr 1fr; }
+
+.chiusa-recapiti {
+  display: grid; gap: 0.35rem; font-style: normal;
+  color: var(--testo); font-size: 0.94rem;
+}
+.chiusa-recapiti .chiusa-nome { color: var(--crema); font-size: 1.05rem; font-weight: 500; }
+.chiusa-recapiti a { color: var(--crema); text-decoration: none; border-bottom: 1px solid var(--filo); width: fit-content; }
+.chiusa-recapiti a:hover { border-color: var(--ocra); }
+
+.chiusa-prezzo { display: grid; gap: 0.2rem; margin: 1.8rem 0 1.6rem; }
+.chiusa-prezzo b { font-size: 1.1rem; font-weight: 500; }
+.chiusa-prezzo span { font-size: 0.82rem; color: rgba(239, 237, 226, 0.42); }
+
+.chiusa-azioni { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+
+/* gli strumenti: una riga sotto l'indirizzo, non più un blocco */
+.chiusa-strumenti-riga {
+  margin: 1.2rem 0 0; max-width: 46ch;
+  font-size: 0.82rem; line-height: 1.55;
+  color: rgba(239, 237, 226, 0.42);
+}
+
+/* ── la mappa ──────────────────────────────────────────────────
+   Finché non la si apre è un disegno, non un iframe: trecento
+   chilobyte e i cookie di Google non si scaricano addosso a chi
+   voleva solo leggere gli orari. */
+.mappa { display: flex; flex-direction: column; gap: 0.7rem; }
+
+.mappa-finta,
+.mappa-vera {
+  display: block; width: 100%; aspect-ratio: 16 / 10;
+  border: 1px solid var(--filo); border-radius: 14px;
+  background: rgba(239, 237, 226, 0.025);
+}
+.mappa-vera { border: 1px solid var(--filo); }
+
+.mappa-finta {
+  position: relative; overflow: hidden;
+  padding: 0; cursor: pointer; color: var(--crema);
+  transition: border-color 0.3s var(--curva), background 0.3s var(--curva);
+}
+.mappa-finta:hover { border-color: var(--ocra); background: rgba(232, 163, 58, 0.05); }
+.mappa-finta svg { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--crema); }
+
+.mappa-sopra {
+  position: absolute; left: 1.1rem; bottom: 1.1rem;
+  display: flex; flex-direction: column; gap: 0.15rem; text-align: left;
+}
+.mappa-sopra b {
+  font-size: 0.95rem; font-weight: 500;
+  border-bottom: 1px solid var(--ocra); padding-bottom: 0.15rem; width: fit-content;
+}
+.mappa-sopra i {
+  font-style: normal; font-family: var(--mono);
+  font-size: 0.68rem; letter-spacing: 0.06em;
+  color: rgba(239, 237, 226, 0.55);
+}
+
+.mappa-nota {
+  margin: 0; font-size: 0.76rem; line-height: 1.5;
+  color: rgba(239, 237, 226, 0.38);
+}
+.mappa-nota a {
+  color: var(--crema); text-decoration: none;
+  border-bottom: 1px solid var(--filo); white-space: nowrap;
+}
+.mappa-nota a:hover { border-color: var(--ocra); }
+
+.chiusa-nota {
+  margin: 0 0 2rem; max-width: 62ch;
+  font-size: 0.84rem; line-height: 1.55; color: rgba(239, 237, 226, 0.45);
+}
+.chiusa-piede a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--filo); }
+.chiusa-piede a:hover { color: var(--crema); border-color: var(--ocra); }
+
+/* l'avviso dei dati finti: deve dare fastidio, è il suo mestiere */
+.chiusa-avviso {
+  margin: 1.6rem 0 0; padding: 0.9rem 1.1rem;
+  border: 1px solid rgba(232, 163, 58, 0.42); border-radius: 10px;
+  background: rgba(232, 163, 58, 0.07);
+  font-size: 0.78rem; line-height: 1.5; color: rgba(239, 237, 226, 0.72);
+}
+.chiusa-avviso b { color: var(--ocra); }
+.chiusa-avviso code {
+  font-family: var(--mono); font-size: 0.72rem;
+  color: var(--crema); background: rgba(239, 237, 226, 0.08);
+  padding: 0.1rem 0.35rem; border-radius: 4px;
+}
+
+.chiusa-piede {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem;
+  padding-top: 1.4rem; border-top: 1px solid var(--filo);
+  font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.1em; color: rgba(239, 237, 226, 0.42);
+}
+
+/* ═════════════════════════════════════════════
+   TELEFONO — non è una riduzione, è un altro impianto.
+   Sul computer scena e testo stanno affiancati; su una
+   colonna da 390 pixel non ci stanno. La scena sale nella
+   fascia alta (la telecamera lo sa: vedi lib/schermo.js) e
+   il testo le scorre sotto.
+   ═════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { -webkit-tap-highlight-color: transparent; }
+
+  .indice, .reticolo { display: none; }
+  .chi-riga { grid-template-columns: 1fr; gap: 1.2rem; }
+  .chi-vuoto { display: none; }
+
+  /* le altezze in dvh: con vh, la barra degli indirizzi che
+     compare e scompare fa saltare tutto il montaggio */
+  .apertura, .strato { height: 100dvh; }
+
+  /* La fascia alta è della scena, il resto è del testo. La misura
+     non è a caso: su un iPhone SE restano 434 px per il testo, e il
+     contenuto della sezione più lunga — cinque strumenti — ne occupa
+     circa 420. Sopra il 30% la sezione traboccherebbe sotto la scena. */
+  .sez {
+    align-items: flex-end;
+    padding: 30dvh 0 5dvh;
+  }
+  .sez-corpo { width: 88vw; --colonna: 100%; }
+  .sez-stretto { max-width: none; }
+
+  .filigrana {
+    font-size: 30vw; right: 0; top: 30dvh; transform: none;
+    color: rgba(239, 237, 226, 0.03);
+  }
+
+  .tag { font-size: 0.6rem; letter-spacing: 0.14em; gap: 0.6rem; }
+  .linea { margin-top: 0.7rem; }
+  .titolo { margin-top: 0.7rem; font-size: clamp(1.5rem, 6.6vw, 2.1rem); max-width: 16ch; line-height: 1.02; }
+  .titolo-largo { max-width: 17ch; }
+  .corpo { margin-top: 0.6rem; font-size: 0.85rem; line-height: 1.45; max-width: none; }
+  .aiuto { margin-top: 0.8rem; font-size: 0.58rem; }
+  .nota-piccola { font-size: 0.68rem; }
+
+  /* apertura: le battute stanno sotto la scena, come le sezioni */
+  .apertura { align-items: flex-end; }
+  .apertura-centro { width: 88vw; padding-bottom: 13dvh; }
+  .battuta { position: static; transform: none; max-width: 13ch; font-size: clamp(1.9rem, 8vw, 2.7rem); }
+  .battuta + .battuta { position: absolute; bottom: 13dvh; }
+  .battuta-firma { max-width: 13ch; font-size: clamp(1.8rem, 7.6vw, 2.5rem); }
+  .battuta-coda { margin-top: 0.9rem; font-size: 0.62rem; }
+  .guida { bottom: 3dvh; }
+  .salta { right: 6vw; bottom: 3dvh; padding: 0.6rem 1rem; font-size: 0.72rem; }
+
+  /* intestazione: il telefono resta, è il gesto più utile del sito */
+  .testata { width: 88vw; padding-top: 1rem; }
+  .testata-testo b { font-size: 0.78rem; }
+  .testata-testo em { font-size: 0.52rem; letter-spacing: 0.1em; }
+  .testata-tel { font-size: 0.6rem; padding: 0.55rem 0.8rem; white-space: nowrap; }
+  /* su una riga da 375 px la città mandava l'intestazione a capo */
+  .testata-citta { display: none; }
+
+  /* 01 · strumenti — si toccano, quindi devono essere alti da toccare */
+  .strumenti { margin-top: 0.9rem; }
+  .strumenti li {
+    grid-template-columns: 3.4rem minmax(0, 1fr);
+    padding: 0.58rem 0; min-height: 44px;
+  }
+  .str-misura { display: none; }
+  .str-sigla { font-size: 0.56rem; }
+  .str-breve { font-size: 1.06rem; }
+  .str-nome { font-size: 0.66rem; }
+  
+
+  /* 02 · composizione */
+  .quadro { margin-top: 0.9rem; padding: 0.9rem 1rem; border-radius: 14px; }
+  .quadro-n { font-size: 1.5rem; }
+  .letture { gap: 0.8rem; }
+  .lettura-n { font-size: 1.15rem; }
+  .verdetto { font-size: 0.8rem; }
+  /* col pollice serve un bersaglio più grosso */
+  .cursore input::-webkit-slider-thumb { width: 26px; height: 26px; margin-top: -12px; }
+  .cursore input::-moz-range-thumb { width: 26px; height: 26px; }
+
+  /* 03 · percorsi */
+  .percorsi { margin-top: 0.9rem; }
+  .percorso-testa { padding: 0.7rem 0; min-height: 46px; }
+  .percorso-t { font-size: 1.06rem; }
+  .percorso-nota { font-size: 0.68rem; }
+  .percorso-dentro > ul { padding-left: 3.2rem; }
+
+  /* 04 · prenota */
+  .carta { grid-template-columns: 1fr; gap: 1.4rem; padding: 1.2rem; }
+  .carta-n { font-size: 2.6rem; }
+  .azioni { flex-direction: column; align-items: stretch; }
+  .btn { width: 100%; height: 3rem; }
+  .chiusura { flex-direction: column; gap: 0.3rem; }
+
+  .titoli { margin-top: 1rem; }
+  .titoli li { padding: 0.55rem 0; }
+  .titoli-t { font-size: 0.92rem; }
+  .titoli-n { font-size: 0.72rem; }
+
+  /* la barra: due gesti, sempre raggiungibili col pollice */
+  .azione-fissa {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; gap: 0.6rem;
+    padding: 0.7rem 6vw calc(0.7rem + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--fondo) 62%, rgba(4, 18, 13, 0));
+    transform: translateY(120%);
+    transition: transform 0.5s var(--curva);
+  }
+  .azione-fissa.su { transform: none; }
+  .azione-fissa .btn { flex: 1; height: 2.9rem; font-size: 0.88rem; }
+  .azione-fissa .btn-linea { flex: 0 0 42%; }
+  /* la guida e il pulsante "salta" starebbero sotto la barra */
+  .strato, .apertura { padding-bottom: 0; }
+
+  /* la chiusura */
+  .chiusa-dentro { width: 88vw; }
+  .chiusa { padding-bottom: 6rem; }
+  .chiusa-due { grid-template-columns: 1fr; gap: 2.2rem; }
+  .chiusa-griglia { grid-template-columns: 1fr; gap: 1.4rem; }
+  .chiusa-azioni { flex-direction: column; }
+}
+
+/* schermi bassi in orizzontale: la fascia alta si stringe */
+@media (max-width: 900px) and (orientation: landscape) {
+  .sez { padding: 26dvh 0 4dvh; }
+  .apertura-centro { padding-bottom: 8dvh; }
+  .filigrana { display: none; }
+}
+
+/* schermi bassi: la fascia della scena si stringe ancora */
+@media (max-width: 900px) and (max-height: 700px) {
+  .sez { padding: 22dvh 0 4dvh; }
+  .verdetto { min-height: 0; margin-top: 1rem; }
+  .corpo { display: none; }
+  .apertura-centro { padding-bottom: 10dvh; }
+}
+
+/* telefoni piccoli */
+@media (max-width: 380px) {
+  .titolo { font-size: 1.6rem; }
+  .battuta { font-size: 1.85rem; }
+  .strumenti li { grid-template-columns: 3rem minmax(0, 1fr); }
+}
+
+/* ═════════════════════════════════════════════
+   chi ha chiesto meno animazioni: gliele togliamo.
+   Non è una gentilezza, per qualcuno è una necessità.
+   ═════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .entra { opacity: 1; transform: none; }
+  .linea { transform: scaleX(1); }
+}
+
+/* stampa: resta solo quello che serve davvero */
+@media print {
+  canvas, .apertura, .strato, .indice, .reticolo, .testata { display: none !important; }
+  .chiusa { border: 0; padding-top: 0; }
+  .chiusa::before { display: none; }
+  body, html { background: #fff; color: #000; }
+  .chiusa-gruppo li, .chiusa-recapiti, .chiusa-strumenti-riga { color: #222; }
+}

@@ -1,0 +1,10 @@
+# Dott. Antonio Toscano — Biologo Nutrizionista
+# Cambia l'indirizzo della sitemap quando avrai il dominio vero.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://www.antoniotoscanonutrizionista.it/sitemap.xml
+
+# pagina di servizio per provare il sito alle misure dei telefoni
+Disallow: /prova-telefono.html
