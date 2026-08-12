@@ -37,7 +37,11 @@ export default function Apertura() {
         el.style.transform = `translate3d(0, ${(1 - entra) * 34 - esce * 34}px, 0)`
       })
 
-      if (guida.current) guida.current.style.opacity = 1 - fascia(p, 0.01, 0.09)
+      /* SCORRI se ne va molto più tardi di prima. Con l'apertura a
+         tre schermate e otto, sparire al nove per cento voleva dire
+         sparire dopo un terzo di schermata: chi arriva non ha
+         ancora capito che si scorre, e si trova il nero muto. */
+      if (guida.current) guida.current.style.opacity = 1 - fascia(p, 0.14, 0.32)
       if (pulsante.current) {
         const o = (1 - fascia(p, 0.88, 1)) * (fuori ? 0 : 1)
         pulsante.current.style.opacity = o

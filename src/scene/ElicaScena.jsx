@@ -60,17 +60,25 @@ const PAGLIA = new THREE.Color('#DCCDA2')
    ARRIVO   quante sfere ci sono. Da una ventina a centotrentaquattro.
    RADUNO   quanto sono radunate. 0 sparse, 1 composte.
 
-   Il primo mezzo schermo di rotellina fa solo comparire sfere: lo
-   spazio si popola e resta disordinato. Poi comincia il raduno, e
-   i bastoncini arrivano per ultimi. */
+   La PRIMA SCHERMATA INTERA fa solo comparire sfere: si parte da
+   dieci in mezzo al nero e lo spazio si popola restando
+   disordinato. Solo dopo comincia il raduno, che si prende un'altra
+   schermata e settanta, e i bastoncini arrivano per ultimi.
+
+   In numeri, sulle tre schermate e otto dell'apertura:
+     0,0 → 1,0   dieci sfere che diventano cinquanta. Nessun ordine.
+     1,0 → 2,3   arrivano le altre mentre le prime si radunano.
+     2,3 → 2,7   ci sono tutte, l'elica si chiude, crescono i pioli.
+     2,7 → 3,3   ferma e viva. È qui che compare il nome.
+     3,3 → 3,8   si sfalda verso il capitolo dopo. */
 function arrivo(s, cap, q) {
-  if (cap === 0) return 0.36 + clamp(s / 1.30) * 0.64
+  if (cap === 0) return 0.20 + clamp(s / 2.30) * 0.80
   if (cap < 5) return 1
-  return 0.36 + clamp(q / 0.42) * 0.64
+  return 0.20 + clamp(q / 0.44) * 0.80
 }
 
 function raduno(s, cap, q) {
-  if (cap === 0) return clamp((s - 0.55) / 0.85)
+  if (cap === 0) return clamp((s - 1.00) / 1.70)
   /* lo sgretolamento è affidato alla presenza, non al raduno:
      comincia quando comincia il capitolo dopo */
   if (cap < 5) return 1 - morbida(fascia(q, CAMBIO_DA, 1))

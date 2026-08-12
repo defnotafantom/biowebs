@@ -43,6 +43,7 @@ export default function App() {
     /* l'intestazione è fissa: quando comincia la parte scritta in
        fondo si toglie, altrimenti resta piantata sopra il testo */
     const testata = document.querySelector('.testata')
+    const indice = document.querySelector('.indice')
     const guarda = new IntersectionObserver(
       ([v]) => testata?.classList.toggle('via', v.isIntersecting),
       { rootMargin: '-70px 0px 0px 0px' }
@@ -50,20 +51,38 @@ export default function App() {
     const chiusa = document.querySelector('.chiusa')
     if (chiusa) guarda.observe(chiusa)
 
-    /* la barra entra dopo la prima schermata e si toglie quando
-       arrivano i pulsanti veri, per non averne due uguali a schermo */
+    /* ── che cosa c'è a schermo, e da quando ────────────────────
+       All'apertura non c'è niente: solo il nero, le sfere, la
+       parola SCORRI e il pulsante per saltare. Niente testata,
+       niente indice laterale, niente pulsanti fissi.
+
+       Prima la testata col nome e il mestiere era lì dal primo
+       fotogramma — c'era scritto anche nel commento, "presente dal
+       primo fotogramma" — e faceva due danni. Diceva chi sei prima
+       che l'apertura avesse finito di dirlo, cioè bruciava la
+       battuta; e riempiva d'interfaccia uno schermo che vive di
+       vuoto. Adesso arriva quando arriva il nome grande, e le due
+       cose si presentano insieme.
+
+       La soglia si ricava dall'altezza del capitolo, non è un
+       numero fisso: se l'apertura si allunga o si accorcia,
+       l'interfaccia la segue da sola. */
+    const SOGLIA_UI = CAPITOLI[0].h * 0.74
     let vivo = true
-    const seguiBarra = () => {
+    const seguiInterfaccia = () => {
       if (!vivo) return
+      const s = scroll.schermate
       const b = barra.current
       if (b) {
-        const s = scroll.schermate
         const fine = TOTALE_SCHERMATE - CAPITOLI[CAPITOLI.length - 1].h
-        b.classList.toggle('su', s > 0.9 && s < fine + 0.25)
+        b.classList.toggle('su', s > SOGLIA_UI && s < fine + 0.25)
       }
-      requestAnimationFrame(seguiBarra)
+      const nascosta = s < SOGLIA_UI
+      testata?.classList.toggle('assente', nascosta)
+      indice?.classList.toggle('assente', nascosta)
+      requestAnimationFrame(seguiInterfaccia)
     }
-    requestAnimationFrame(seguiBarra)
+    requestAnimationFrame(seguiInterfaccia)
 
     const muovi = (e) => {
       mouse.current.x = (e.clientX / window.innerWidth) * 2 - 1
@@ -124,9 +143,9 @@ export default function App() {
       <Chiusura />
       <Indice />
 
-      {/* presente dal primo fotogramma: nome, mestiere, città e
-          il numero di telefono. Non copre la scena e non ruba
-          il titolo, ma dice subito dove sei finito. */}
+      {/* Nome, mestiere, città e telefono. NON dal primo
+          fotogramma: entra insieme al nome grande, quando
+          l'apertura ha finito di raccontare. */}
       <header className="testata">
         <a className="testata-marchio" href="#prenota">
           <span className="testata-segno" aria-hidden="true"><i /><i /><i /></span>

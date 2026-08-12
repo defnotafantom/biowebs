@@ -15,7 +15,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 export const CAPITOLI = [
-  { id: 'apertura', h: 2.4, nome: 'Apertura' },
+  /* Quasi quattro schermate solo per l'apertura. Erano due e
+     quattro, e la composizione ci stava dentro a fatica: le sfere
+     arrivavano e si radunavano quasi insieme, e quello che nel
+     video dura mezzo minuto qui durava tre secondi di rotellina.
+     Un'apertura lunga si può sempre saltare col pulsante; una
+     corta non si può allungare mentre la guardi. */
+  { id: 'apertura', h: 3.8, nome: 'Apertura' },
   { id: 'chisono', h: 2.2, nome: 'Chi sono' },
   { id: 'strumenti', h: 2.2, nome: 'La strumentazione' },
   { id: 'condizioni', h: 2.2, nome: 'La tua condizione' },
@@ -62,8 +68,11 @@ export function capitoloA(schermate) {
    Sta in fondo apposta: per i primi quattro quinti del capitolo la
    figura resta com'è — composta e viva — e comincia a sgretolarsi
    solo quando si sta già andando verso quello dopo. Prima partiva
-   al 62% e la figura non stava mai ferma abbastanza da guardarla. */
-export const CAMBIO_DA = 0.82
+   al 62% e la figura non stava mai ferma abbastanza da guardarla;
+   poi all'82%, che con l'apertura allungata cadeva addirittura
+   prima che la composizione fosse finita. All'88% ogni figura
+   resta ferma e viva per oltre mezza schermata. */
+export const CAMBIO_DA = 0.88
 export const CAMBIO_A = 1.0
 
 /**

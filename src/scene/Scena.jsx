@@ -89,7 +89,7 @@ function Atmosfera() {
   const nebbia = useRef()
   useFrame(({ camera }) => {
     if (!nebbia.current) return
-    const p = morbida(clamp(scroll.schermate / 2.4))
+    const p = morbida(clamp(scroll.schermate / 3.4))
     const z = camera.position.z
     nebbia.current.near = z * mescola(0.45, 0.80, p)
     nebbia.current.far = z * mescola(1.90, 2.60, p)

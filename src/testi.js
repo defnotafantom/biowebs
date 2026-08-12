@@ -25,7 +25,7 @@ export const marchio = {
    Una sola battuta, che arriva quando l'elica ha finito di comporsi. */
 export const battute = [
   {
-    da: 0.56, a: 1.00,
+    da: 0.71, a: 1.00,
     riga: 'Dott. Antonio Toscano',
     forte: 'Biologo Nutrizionista',
     coda: 'Reggio Calabria · nutrizione clinica e sportiva',

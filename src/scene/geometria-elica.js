@@ -78,6 +78,11 @@ export function costruisciElica(fattore = 1) {
   const SU_FILO = N - LIBERE
   const perFilo = Math.floor(SU_FILO / 2)
 
+  /* NASCITA — quando compare ognuna, da 0 a 1.
+     L'esponente sotto l'uno spinge quasi tutte verso la fine: con
+     le nascite distribuite in modo uniforme, al primo fotogramma
+     ce n'erano già una quarantina e il vuoto non c'era. Con 0,62
+     ce ne sono dieci, e il resto arriva piano. */
   const elica = new Float32Array(N * 3)
   const misura = new Float32Array(N)
   const nascita = new Float32Array(N)
@@ -108,7 +113,7 @@ export function costruisciElica(fattore = 1) {
          con i ritardi a caso sembra che si radunino alla rinfusa,
          con questo sembra che si costruisca. */
       ritardo[k] = Math.abs(t - 0.5) * 2 * 0.26
-      nascita[k] = caso(k * 3.7 + 91)
+      nascita[k] = Math.pow(caso(k * 3.7 + 91), 0.62)
       k++
     }
   }
@@ -127,7 +132,7 @@ export function costruisciElica(fattore = 1) {
     const g = caso(j * 8.1 + 62)
     misura[j] = 0.05 + g * g * 0.42
     ritardo[j] = 0.26 + caso(j * 9.3 + 24) * 0.22
-    nascita[j] = caso(j * 3.7 + 91)
+    nascita[j] = Math.pow(caso(j * 3.7 + 91), 0.62)
   }
 
   /* ── i bastoncini ────────────────────────────────────────────

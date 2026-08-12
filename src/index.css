@@ -173,6 +173,12 @@ canvas { display: block; touch-action: pan-y; }
 /* arrivati alla parte scritta in fondo, l'intestazione si toglie
    di mezzo: è fissa, e altrimenti resterebbe sopra il testo */
 .testata.via { opacity: 0; pointer-events: none; transform: translateY(-8px); }
+
+/* Assente durante l'apertura: non nascosta a metà, proprio non
+   c'è. L'apertura deve poter contare su uno schermo vuoto. */
+.testata.assente { opacity: 0; pointer-events: none; transform: translateY(-10px); }
+.indice.assente { opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(-12px); }
+.indice { transition: opacity 0.5s var(--curva), transform 0.5s var(--curva); }
 .testata { transition: opacity 0.4s var(--curva), transform 0.4s var(--curva); }
 
 .testata-marchio { display: inline-flex; align-items: center; gap: 0.75rem; }
