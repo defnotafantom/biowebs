@@ -298,6 +298,39 @@ canvas { display: block; touch-action: pan-y; }
 
 .strato { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
 
+/* ─────────────────────────────────────────────
+   il velo — sta fra la scena e il testo
+   ───────────────────────────────────────────── */
+.velo {
+  position: fixed; inset: 0 auto 0 0; z-index: 4;
+  width: min(72%, 70rem); pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--fondo) 0%,
+    var(--fondo) 46%,
+    rgba(4, 18, 13, 0.92) 62%,
+    rgba(4, 18, 13, 0.55) 82%,
+    transparent 100%
+  );
+  transition: opacity 0.7s var(--curva);
+}
+.velo.assente { opacity: 0; }
+
+/* In verticale il testo non sta a sinistra ma sotto la fascia
+   della scena, quindi il velo gira di novanta gradi. */
+@media (max-width: 900px) {
+  .velo {
+    inset: auto 0 0 0; width: auto; height: 74%;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(4, 18, 13, 0.5) 16%,
+      rgba(4, 18, 13, 0.88) 32%,
+      var(--fondo) 48%
+    );
+  }
+}
+
 .sez {
   position: absolute; inset: 0;
   display: flex; align-items: center;
@@ -608,6 +641,12 @@ canvas { display: block; touch-action: pan-y; }
   z-index: 15; display: flex; flex-direction: row-reverse;
   align-items: center; gap: 0.9rem;
 }
+/* la presa: invisibile e larga, perché il bersaglio da centrare
+   col mouse non sia una striscia di venti pixel */
+.indice-presa {
+  position: absolute; left: -1.6vw; top: -2rem; bottom: -2rem;
+  width: 9rem; pointer-events: auto;
+}
 .indice ul {
   list-style: none; margin: 0; padding: 0;
   display: flex; flex-direction: column; gap: 0.5rem;
@@ -624,14 +663,34 @@ canvas { display: block; touch-action: pan-y; }
 .indice-nome {
   font-family: var(--mono); font-size: 0.62rem;
   letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
-  opacity: 0.7; transition: opacity 0.4s var(--curva);
+  /* chiusi: larghezza zero e trasparenti. Non display:none, se no
+     il lettore di schermo non li trova più e il menù sparisce
+     davvero per chi non usa il mouse. */
+  max-width: 0; opacity: 0; overflow: hidden;
+  transform: translateX(-6px);
+  transition: max-width 0.42s var(--curva), opacity 0.3s var(--curva),
+              transform 0.42s var(--curva);
 }
-.indice button.attivo .indice-nome { opacity: 1; }
+.indice:hover .indice-nome,
+.indice:focus-within .indice-nome {
+  max-width: 14rem; opacity: 0.7; transform: none;
+}
+.indice:hover .indice button.attivo .indice-nome { opacity: 1; }
+.indice:hover button.attivo .indice-nome,
+.indice:focus-within button.attivo .indice-nome { opacity: 1; }
+
+/* a riposo i trattini sono corti e smorti: una scala, non un menù */
+.indice button { opacity: 0.55; transition: opacity 0.4s var(--curva), color 0.4s var(--curva); }
+.indice:hover button, .indice:focus-within button { opacity: 1; }
 .indice-trattino {
-  display: block; width: 20px; height: 1px; background: currentColor;
+  display: block; width: 14px; height: 1px; background: currentColor;
   transition: width 0.4s var(--curva), background 0.4s;
 }
-.indice button.attivo .indice-trattino { width: 36px; background: var(--ocra); }
+.indice button.attivo .indice-trattino { width: 26px; background: var(--ocra); }
+.indice:hover .indice-trattino,
+.indice:focus-within .indice-trattino { width: 20px; }
+.indice:hover button.attivo .indice-trattino,
+.indice:focus-within button.attivo .indice-trattino { width: 36px; }
 
 .indice-traccia {
   position: relative; width: 1px; height: 150px; order: 0;
@@ -857,8 +916,24 @@ canvas { display: block; touch-action: pan-y; }
 .rec {
   margin-top: 1.6rem; padding: 1.3rem 1.4rem;
   border: 1px solid var(--filo); border-radius: 14px;
-  background: rgba(4, 18, 13, 0.5);
+  /* il fondo era mezzo trasparente e le sfere ci passavano dietro
+     rendendo il testo faticoso. Adesso è quasi pieno: una
+     recensione è la cosa più importante della pagina per chi sta
+     decidendo, e deve leggersi senza sforzo. */
+  background: rgba(4, 18, 13, 0.9);
+  backdrop-filter: blur(7px);
 }
+/* la dissolvenza fra una recensione e l'altra: il contenuto
+   scende di sei pixel mentre svanisce, e risale entrando */
+.rec .rec-alto, .rec .rec-testo, .rec .rec-quando {
+  opacity: 0; transform: translateY(6px);
+  transition: opacity 0.3s var(--curva), transform 0.3s var(--curva);
+}
+.sez.dentro .rec.rec-dentro .rec-alto,
+.sez.dentro .rec.rec-dentro .rec-testo,
+.sez.dentro .rec.rec-dentro .rec-quando { opacity: 1; transform: none; }
+.rec-testo { transition-delay: 0.05s; }
+.rec-quando { transition-delay: 0.09s; }
 .rec-alto { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
 .rec-stelle { color: var(--ocra); letter-spacing: 0.12em; font-size: 0.9rem; }
 .rec-chi { font-size: 1rem; font-weight: 500; }

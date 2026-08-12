@@ -20,7 +20,20 @@ import { campoProspettico } from '../lib/nuvola'
    unità. Con 1200 punti i centri distano 0,035 e i punti hanno un
    diametro di 0,038 — si sfiorano appena, e il tratto resta continuo
    senza diventare una fila di palline. */
-export const PUNTI_DISEGNO = 1200
+/* Da milleduecento a quattrocentoventi.
+   Milleduecento punti da un pixel erano una grandinata: coprivano
+   mezzo schermo, si muovevano tutti insieme e non somigliavano per
+   niente alle sfere dell'elica, che sono poche e grosse. La regola
+   della scena è una sola — sfere di frutta — e i disegni devono
+   obbedirle come tutto il resto, se no sono due siti diversi
+   attaccati con lo scotch.
+
+   Trecentoventi e non quattrocentoventi: l'elica ne ha
+   centotrentaquattro, e un disegno che ne usa il triplo torna a
+   sembrare uno sciame. Il tratto si fa più punteggiato, ma è il
+   prezzo giusto — meglio un disegno fatto di poche sfere
+   riconoscibili che una linea continua di polvere. */
+export const PUNTI_DISEGNO = 320
 
 /* ── le primitive: ognuna restituisce una spezzata ── */
 
@@ -363,7 +376,21 @@ export function campiona(strisce, n = PUNTI_DISEGNO) {
    conto della prospettiva però non cambia con la scala, perché
    scala anche la distanza. */
 export function sparso(n = PUNTI_DISEGNO) {
-  return campoProspettico(n, 77, 20, 11, 36, 1.16)
+  /* L'ultimo parametro è il bordo, cioè quanto il campo deborda
+     dall'inquadratura. Per l'elica vale 1,16 perché l'elica
+     nell'apertura ha lo schermo tutto per sé. Qui no: a sinistra
+     c'è una colonna di testo da leggere, e un campo largo quanto
+     lo schermo ci finiva sopra.
+
+     A 0,36 le particelle stanno nella metà destra, che è dove poi
+     si comporrà il disegno. Sparse e composte occupano la stessa
+     zona: cambia l'ordine, non il posto.
+
+     Anche la profondità è più corta che nell'elica — da dodici a
+     ventisette invece che da otto a trentasei. Le lontanissime
+     erano puntini nella nebbia sparsi su tutto lo schermo, cioè
+     esattamente il disturbo che si voleva togliere. */
+  return campoProspettico(n, 77, 20, 12, 27, 0.36)
 }
 
 

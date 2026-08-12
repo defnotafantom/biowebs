@@ -21,8 +21,12 @@ import {
    piccolo ritardo suo. Sembra che il disegno si ridisegni da solo.
    ═══════════════════════════════════════════════════════════════ */
 
-const CREMA = new THREE.Color('#F2EFE1')
-const ORO = new THREE.Color('#E8A33A')
+/* Gli stessi frutti dell'elica, non più crema e oro. Un disegno
+   fatto di puntini dorati e un'elica fatta di frutta erano due
+   linguaggi: adesso è la stessa materia che si dispone in un altro
+   modo, che è poi tutto il concetto del sito. */
+const TINTE = ['#FF6A00', '#FFA607', '#FFC81C', '#E80F3C', '#C9D62A', '#FF4D18', '#C25A18']
+  .map((c) => new THREE.Color(c))
 
 /* ── i due tempi, come nell'elica ──────────────────────────────
    Vale qui la stessa cosa che vale per l'apertura: le particelle
@@ -39,10 +43,17 @@ function arrivo(cap, q) {
   if (cap !== 2 && cap !== 3) return 1
   return 0.06 + clamp(q / 0.42) * 0.94
 }
-function compone(cap, q) {
-  if (cap !== 2 && cap !== 3) return 1
-  return morbida(clamp((q - 0.16) / 0.40))
-}
+
+/* COMPONE non dipende più da dove sei arrivato con la rotellina.
+   Prima le particelle si radunavano da sole scorrendo, e poi il
+   cursore cambiava soltanto quale figura fosse: cioè la figura
+   c'era comunque, e il gesto dell'utente era decorativo.
+
+   Adesso a cursore fermo restano sparse e basta. La figura la fa
+   comparire chi punta una voce, ed è l'unico modo per farla
+   comparire. Vale già per "la tua condizione", adesso vale anche
+   per gli strumenti: una regola sola per tutte e due. */
+function compone() { return 1 }
 /* quanto dura la comparsa di un singolo punto */
 const NASCITA = 0.12
 
@@ -51,7 +62,7 @@ const NASCITA = 0.12
    si aggiorna qui e basta. */
 function quale() {
   const c = scroll.capitolo
-  if (c === 2) return DISEGNI_STRUMENTI[clamp(stato.strumento, 0, 4)]
+  if (c === 2) return stato.strumento >= 0 ? DISEGNI_STRUMENTI[clamp(stato.strumento, 0, 4)] : 'sparso'
   /* In "la tua condizione" i punti restano sparsi finché non si
      punta una voce: stato.area vale -1 e il disegno non si compone.
      È il gesto che voleva il committente — a mouse fermo la scena
@@ -105,7 +116,10 @@ export default function Disegno({ mouse }) {
     const c = new THREE.Color()
     for (let i = 0; i < n; i++) {
       m.instanceMatrix.array[i * 16 + 15] = 1
-      c.copy(CREMA).lerp(ORO, 0.18 + 0.5 * (i % 7 === 0 ? 1 : 0))
+      const g = Math.sin(i * 91.7) * 43758.5453
+      c.copy(TINTE[Math.floor((g - Math.floor(g)) * TINTE.length) % TINTE.length])
+      const h = Math.sin(i * 33.1) * 43758.5453
+      c.offsetHSL(0, 0.05, ((h - Math.floor(h)) - 0.5) * 0.16)
       m.setColorAt(i, c)
     }
     m.instanceMatrix.needsUpdate = true
@@ -121,7 +135,7 @@ export default function Disegno({ mouse }) {
     const capOra = scroll.capitolo
     const presenza = presenzaScena('disegno', capOra, scroll.q)
     const arr = arrivo(capOra, scroll.q)
-    const comp = compone(capOra, scroll.q)
+    const comp = compone()
     gr.visible = presenza > 0.01
     if (!gr.visible) return
 
@@ -188,7 +202,16 @@ export default function Disegno({ mouse }) {
          polvere: non si legge come materia che si raduna. La misura
          cambia mentre si compone, e il rimpicciolirsi fa parte del
          gesto. */
-      const s = (0.019 + 0.009 * t * k) * (1 + (1 - k) * 2.5) * presenza * vn
+      /* Quattro volte più grandi di prima, perché sono un terzo del
+         numero e devono leggersi come sfere, non come polvere. Da
+         sparse crescono ancora: composte fanno il tratto sottile
+         del disegno tecnico, sparse fanno materia. */
+      /* Sparse sono il doppio: poche e grosse come le sfere
+         dell'elica. Composte si assottigliano, perché lì devono
+         fare un tratto e non una collana. Il fattore è legato a
+         "sciolto" — cioè a cosa sta puntando il cursore — e non
+         più a quanto hai scorso: adesso è il gesto a comandare. */
+      const s = (0.048 + 0.022 * t) * (1 + sciolto * 1.05) * presenza * vn
       mat[o] = s; mat[o + 5] = s; mat[o + 10] = s
       mat[o + 12] = x; mat[o + 13] = y; mat[o + 14] = z
     }
@@ -200,7 +223,7 @@ export default function Disegno({ mouse }) {
     const q = morbida(scroll.q)
     /* come per l'elica: sparso sta al centro e prende tutto lo
        schermo, composto si sposta a destra a lasciare il testo */
-    const px = schermo.stretto ? 0 : 3.25 * (0.25 + 0.75 * comp)
+    const px = schermo.stretto ? 0 : 3.45
     const k = 1 - Math.exp(-dt * 3)
     gr.position.x += (px - gr.position.x) * k
     gr.position.y += (scena.alto + Math.sin(tempo * 0.35) * 0.09 - gr.position.y) * k
@@ -227,13 +250,17 @@ export default function Disegno({ mouse }) {
   return (
     <group ref={gruppo}>
       <instancedMesh ref={rete} args={[undefined, undefined, n]} frustumCulled={false}>
-        <sphereGeometry args={[1, 6, 4]} />
-        <meshStandardMaterial
-          roughness={0.3}
-          metalness={0.05}
-          envMapIntensity={1.4}
-          emissive="#E8A33A"
-          emissiveIntensity={0.35}
+        <sphereGeometry args={[1, 14, 10]} />
+        {/* lo stesso materiale delle sfere dell'elica: se la materia
+            è la stessa, la scena resta una sola */}
+        <meshPhysicalMaterial
+          roughness={0.22}
+          metalness={0.02}
+          clearcoat={0.85}
+          clearcoatRoughness={0.2}
+          envMapIntensity={1.3}
+          sheen={0.4}
+          sheenRoughness={0.55}
         />
       </instancedMesh>
     </group>

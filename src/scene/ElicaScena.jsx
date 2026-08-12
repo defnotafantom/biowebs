@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { scroll, clamp, fascia, morbida } from '../lib/scroll'
+import { scroll, clamp, morbida, mescola } from '../lib/scroll'
 import { schermo, scena, quantita } from '../lib/schermo'
 /* I nomi di questi due file sono scelti per non somigliarsi:
    "ElicaScena" il componente, "geometria-elica" i dati. Su Windows
@@ -11,7 +11,7 @@ import { schermo, scena, quantita } from '../lib/schermo'
    spinner senza un errore in console e con una richiesta 503 che si
    vedeva solo guardando la rete. */
 import { costruisciElica, caso, PIOLI } from './geometria-elica'
-import { presenzaScena, CAMBIO_DA } from '../lib/capitoli'
+import { presenzaScena } from '../lib/capitoli'
 
 /* ═══════════════════════════════════════════════════════════════
    L'ELICA
@@ -71,18 +71,18 @@ const PAGLIA = new THREE.Color('#DCCDA2')
      2,3 → 2,7   ci sono tutte, l'elica si chiude, crescono i pioli.
      2,7 → 3,3   ferma e viva. È qui che compare il nome.
      3,3 → 3,8   si sfalda verso il capitolo dopo. */
-function arrivo(s, cap, q) {
+function arrivo(s, cap) {
   if (cap === 0) return 0.20 + clamp(s / 2.30) * 0.80
-  if (cap < 5) return 1
-  return 0.20 + clamp(q / 0.44) * 0.80
+  return 1
 }
 
-function raduno(s, cap, q) {
+/* Si compone UNA VOLTA SOLA, nell'apertura, e da lì in poi resta
+   composta per sempre. Prima si sfaldava alla fine di ogni
+   capitolo e si rifaceva al successivo: un effetto ripetuto è un
+   tic. Adesso quello che cambia è quanto è lontana. */
+function raduno(s, cap) {
   if (cap === 0) return clamp((s - 1.00) / 1.70)
-  /* lo sgretolamento è affidato alla presenza, non al raduno:
-     comincia quando comincia il capitolo dopo */
-  if (cap < 5) return 1 - morbida(fascia(q, CAMBIO_DA, 1))
-  return morbida(fascia(q, 0.26, 0.66))
+  return 1
 }
 
 /* quanto dura la comparsa di una singola sfera, in unità di arrivo */
@@ -163,10 +163,11 @@ export default function ElicaScena({ mouse }) {
     if (!m || !gr) return
     const tempo = clock.elapsedTime
     const cap = scroll.capitolo
-    const r = raduno(scroll.schermate, cap, scroll.q)
-    const a = arrivo(scroll.schermate, cap, scroll.q)
-    const inScena = presenzaScena('elica', cap, scroll.q)
-    gr.visible = inScena > 0.01
+    const r = raduno(scroll.schermate, cap)
+    const a = arrivo(scroll.schermate, cap)
+    /* quanto è in primo piano: 1 protagonista, 0,16 fondale */
+    const avanti = presenzaScena('elica', cap, scroll.q)
+    gr.visible = avanti > 0.02
     if (!gr.visible) return
 
     const { caos, elica, misura, nascita, ritardo } = dati
@@ -202,7 +203,7 @@ export default function ElicaScena({ mouse }) {
       const py = (ay * w0 + cy * w1 + by * w2) * fuori + Math.cos(tempo * 0.42 + fase[i]) * vita
       const pz = (az * w0 + cz * w1 + bz * w2) * fuori + Math.sin(tempo * 0.46 + fase[i] * 1.4) * vita
 
-      const s = misura[i] * inScena * vn
+      const s = misura[i] * vn
       mat[o] = s; mat[o + 5] = s; mat[o + 10] = s
       mat[o + 12] = px; mat[o + 13] = py; mat[o + 14] = pz
     }
@@ -234,7 +235,7 @@ export default function ElicaScena({ mouse }) {
         const lungo = _dir.length()
         _dir.normalize()
         _rot.setFromUnitVectors(_su, _dir)
-        _sc.set(0.042 * inScena, lungo * cresce, 0.042 * inScena)
+        _sc.set(0.042, lungo * cresce, 0.042)
         _mat4.compose(_pos, _rot, _sc)
         bb.setMatrixAt(i, _mat4)
       }
@@ -256,15 +257,38 @@ export default function ElicaScena({ mouse }) {
     gr.rotation.z = inclina.current.z
 
     const kx = 1 - Math.exp(-dt * 2)
+
     /* Nell'apertura lo spostamento a destra segue il raduno: da
        sparse stanno al centro e occupano tutto lo schermo — il
        vuoto va riempito per intero, se no metà pagina è morta — e
        mentre si radunano scivolano a destra a fare posto al nome.
-       Il compattarsi e il farsi da parte sono lo stesso gesto. */
-    const bx2 = schermo.stretto ? 0 : (cap === 0 ? 2.7 * r : 2.7)
-    const bs = schermo.stretto ? 0.40 : 1
+       Il compattarsi e il farsi da parte sono lo stesso gesto.
+
+       Da fondale va ancora più a destra: lì sotto c'è del testo da
+       leggere, e una sfera dietro una parola resta una sfera
+       dietro una parola anche se è sfocata. */
+    /* Da fondale torna verso il centro: lì c'è il velo a spegnerla,
+       mentre sulla destra ci sono i contatti e il riquadro del
+       ritratto, cioè roba da leggere. */
+    const largo = schermo.stretto ? 0 : mescola(1.9, 2.7, avanti)
+    const bx2 = schermo.stretto ? 0 : (cap === 0 ? 2.7 * r : largo)
+
+    /* La presenza non rimpicciolisce più le sfere: le ALLONTANA.
+       Rimpicciolire fa un modellino che si sgonfia; allontanare fa
+       un oggetto che resta com'è e va in fondo — e la nebbia, che
+       è tarata sulla distanza della telecamera, lo spegne da sola
+       senza bisogno di trasparenze che costano care. */
+    /* Ventuno unità di arretramento, non nove. A nove restava un
+       oggetto grosso e riconoscibile piantato sopra il testo: era
+       ancora protagonista, solo un po' più in là. A ventuno la
+       nebbia se la mangia all'ottanta per cento e diventa quello
+       che deve essere — un fondo, una cosa che sai che c'è. */
+    const bz = mescola(-21, 0, avanti)
+    const bs = (schermo.stretto ? 0.40 : 1) * mescola(0.50, 1, avanti)
+
     gr.position.x += (bx2 - gr.position.x) * kx
     gr.position.y += (scena.alto - gr.position.y) * kx
+    gr.position.z += (bz - gr.position.z) * kx
     gr.scale.setScalar(gr.scale.x + (bs - gr.scale.x) * kx)
   })
 

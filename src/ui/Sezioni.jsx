@@ -148,8 +148,18 @@ function Strumenti() {
   const rif = useVisibilita(2)
   const tocco = useTocco()
   const s = sezioni.strumenti
-  const [su, setSu] = useState(0)
-  const entra = (i) => { setSu(i); stato.strumento = i }
+  /* -1 = nessuno strumento puntato: le particelle restano sparse.
+     Al tocco non esiste il passaggio del cursore, quindi lì si
+     parte dal primo. */
+  const [su, setSu] = useState(tocco ? 0 : -1)
+  /* La scena legge da stato.strumento, che vive fuori da React
+     perché il ciclo 3D non può dipendere da un ridisegno. Va
+     tenuto in pari qui, e non dentro i gestori: se lo scrivessi
+     solo al passaggio del cursore, al primo caricamento resterebbe
+     al valore di partenza e la figura si comporrebbe da sola. */
+  useEffect(() => { stato.strumento = su }, [su])
+  const entra = (i) => setSu(i)
+  const esci = () => setSu(-1)
   const v = s.voci[su] || s.voci[0]
 
   return (
@@ -166,9 +176,9 @@ function Strumenti() {
             </div>
           </>
         ) : (
-          <ul className="strumenti entra" style={{ '--i': 3 }}>
+          <ul className="strumenti entra" style={{ '--i': 3 }} onPointerLeave={esci}>
             {s.voci.map((x, i) => (
-              <li key={x.sigla} className={su === i ? 'acceso' : 'spento'}
+              <li key={x.sigla} className={su === i ? 'acceso' : su === -1 ? '' : 'spento'}
                 onPointerEnter={() => entra(i)} onFocus={() => entra(i)} tabIndex={0}>
                 <span className="riempi" aria-hidden="true" />
                 <span className="str-sigla">{x.sigla}</span>
@@ -195,7 +205,8 @@ function Condizioni() {
   /* -1 = nessuna voce puntata: nella scena i punti restano sparsi
      e fluttuanti, e si compongono solo quando si punta qualcosa */
   const [su, setSu] = useState(tocco ? 0 : -1)
-  const entra = (i) => { setSu(i); stato.area = i }
+  useEffect(() => { stato.area = su }, [su])
+  const entra = (i) => setSu(i)
   const esci = () => { if (!schermo.tocco) { setSu(-1); stato.area = -1 } }
   const v = s.voci[su] || s.voci[0]
 
@@ -401,10 +412,45 @@ function Prenota() {
 }
 
 /* ── 05 · recensioni ────────────────────────────────────────── */
+/* Le recensioni girano da sole ogni sette secondi, in dissolvenza,
+   e si fermano appena ci passi sopra il cursore: chi sta leggendo
+   non deve vedersi portare via la riga a metà frase.
+
+   Sette secondi e non quattro: le tre recensioni sono lunghe fra le
+   trenta e le cinquanta parole, e si leggono in cinque scarsi. Un
+   cambio prima che tu abbia finito è peggio di nessun cambio.
+
+   La dissolvenza è in due tempi — sparisce, cambia, ricompare — e
+   non un incrocio: due testi diversi sovrapposti a metà opacità
+   sono illeggibili tutti e due. */
+const GIRO_REC = 7000
+const DISSOLVENZA = 320
+
 function Recensioni() {
   const rif = useVisibilita(5)
   const s = sezioni.recensioni
   const [su, setSu] = useState(0)
+  const [dentro, setDentro] = useState(true)
+  const fermo = useRef(false)
+
+  useEffect(() => {
+    /* chi ha chiesto meno animazioni al sistema operativo non se
+       le ritrova addosso lo stesso */
+    const quieto = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (quieto) return
+    let cambio
+    const giro = setInterval(() => {
+      if (fermo.current) return
+      setDentro(false)
+      cambio = setTimeout(() => {
+        setSu((x) => (x + 1) % s.voci.length)
+        setDentro(true)
+      }, DISSOLVENZA)
+    }, GIRO_REC)
+    return () => { clearInterval(giro); clearTimeout(cambio) }
+  }, [s.voci.length])
+
+  const scegli = (i) => { setSu(i); setDentro(true) }
   const v = s.voci[su]
 
   return (
@@ -412,7 +458,12 @@ function Recensioni() {
       <div className="sez-corpo sez-stretto">
         <Testa s={s} />
 
-        <div className="rec entra" style={{ '--i': 3 }}>
+        <div
+          className={`rec entra ${dentro ? 'rec-dentro' : ''}`}
+          style={{ '--i': 3 }}
+          onPointerEnter={() => { fermo.current = true }}
+          onPointerLeave={() => { fermo.current = false }}
+        >
           <div className="rec-alto">
             <span className="rec-stelle" aria-label={`${v.stelle} stelle su 5`}>
               {'★'.repeat(v.stelle)}
@@ -426,7 +477,7 @@ function Recensioni() {
 
         <div className="rec-punti entra" style={{ '--i': 4 }}>
           {s.voci.map((_, i) => (
-            <button key={i} className={su === i ? 'su' : ''} onClick={() => setSu(i)}
+            <button key={i} className={su === i ? 'su' : ''} onClick={() => scegli(i)}
               aria-label={`Recensione ${i + 1} di ${s.voci.length}`} />
           ))}
           <a className="rec-fonte" href={s.fonte.url} target="_blank" rel="noopener">

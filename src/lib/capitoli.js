@@ -34,21 +34,39 @@ export const CAPITOLI = [
    si vede ma non si scorre */
 export const CODA = 1.0
 
-/* Che cosa sta in scena, capitolo per capitolo.
-     elica    0 assente · 1 presente
+/* Quanto ogni sistema sta in PRIMO PIANO, capitolo per capitolo.
+   Non è più "c'è / non c'è": è una distanza.
+
+     elica    1 protagonista · 0,2 fondale lontano · 0 assente
      disegno  0 assente · 1 presente
 
-   In "chi sono" la scena si ritira del tutto: quel capitolo ha il
-   ritratto e i contatti, e l'elica ci passava sopra coprendo le
-   scritte. In "la tua condizione" il disegno c'è ma resta sparso
-   finché non si punta una voce. */
+   Il cambio è quello chiesto guardando il video: l'elica non si
+   sgretola quando finisce l'apertura. Resta composta e ARRETRA.
+   Nella schermata dopo la si vede ancora, piccola e in fondo alla
+   nebbia, dietro il testo; poi si fa da parte per i disegni degli
+   strumenti; poi torna avanti sulle recensioni.
+
+   Sgretolarsi e ricomporsi a ogni capitolo era un effetto: la
+   figura si disfaceva perché sapevo farla disfare. Un oggetto che
+   resta e si allontana è invece un posto — te lo lasci indietro,
+   ma è sempre lì. */
 export const SCENA = [
-  { elica: 1, disegno: 0 },   // 0 · apertura
-  { elica: 0, disegno: 0 },   // 1 · chi sono — solo testo e ritratto
-  { elica: 0, disegno: 1 },   // 2 · la strumentazione
-  { elica: 0, disegno: 1 },   // 3 · la tua condizione
-  { elica: 0, disegno: 0 },   // 4 · prenota
-  { elica: 1, disegno: 0 },   // 5 · recensioni — torna la firma
+  { elica: 1.00, disegno: 0 },   // 0 · apertura — protagonista
+  { elica: 0.28, disegno: 0 },   // 1 · chi sono — resta, ma lontana
+  /* Nei due capitoli dei disegni l'elica sparisce del tutto. A
+     0,16 restava un pulviscolo sparso su tutto lo schermo che si
+     sommava alle particelle del disegno, e due nuvole insieme
+     fanno confusione, non profondità. Qui il soggetto è lo
+     strumento: tutto il resto si toglie di mezzo. */
+  { elica: 0.00, disegno: 1 },   // 2 · strumentazione
+  { elica: 0.00, disegno: 1 },   // 3 · la tua condizione
+  { elica: 0.30, disegno: 0 },   // 4 · prenota — riaffiora
+  /* Sulle recensioni torna, ma non del tutto in primo piano: qui
+     c'è da leggere il giudizio di qualcuno, che è la cosa più
+     importante della pagina per chi sta ancora decidendo. A uno
+     l'elica riempiva mezzo schermo e la recensione diventava una
+     didascalia. */
+  { elica: 0.62, disegno: 0 },   // 5 · recensioni — torna la firma
 ]
 
 export function inizioDi(indice) {

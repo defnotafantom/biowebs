@@ -44,6 +44,7 @@ export default function App() {
        fondo si toglie, altrimenti resta piantata sopra il testo */
     const testata = document.querySelector('.testata')
     const indice = document.querySelector('.indice')
+    const velo = document.querySelector('.velo')
     const guarda = new IntersectionObserver(
       ([v]) => testata?.classList.toggle('via', v.isIntersecting),
       { rootMargin: '-70px 0px 0px 0px' }
@@ -80,6 +81,9 @@ export default function App() {
       const nascosta = s < SOGLIA_UI
       testata?.classList.toggle('assente', nascosta)
       indice?.classList.toggle('assente', nascosta)
+      /* il velo entra un po' prima dell'interfaccia: quando compare
+         il nome grande deve già esserci qualcosa sotto che lo regga */
+      velo?.classList.toggle('assente', s < SOGLIA_UI - 0.35)
       requestAnimationFrame(seguiInterfaccia)
     }
     requestAnimationFrame(seguiInterfaccia)
@@ -122,6 +126,21 @@ export default function App() {
   return (
     <>
       <Scena mouse={mouse} />
+
+      {/* IL VELO
+          Una sfumatura dal colore del fondo al trasparente, sotto
+          la colonna del testo e sopra la scena.
+
+          Serve perché le sfere sono lucide e chiare, il testo è
+          chiaro, e una sfera dietro una parola la rende faticosa
+          anche quando è sfocata e lontana. Spostare la scena
+          sempre più a destra risolveva finché non arrivava una
+          sfera libera che deriva; questo risolve sempre, e non
+          costa niente perché è un gradiente, non un filtro.
+
+          Non c'è durante l'apertura: lì di testo non ce n'è, e le
+          sfere devono poter prendere tutto lo schermo. */}
+      <div className="velo" aria-hidden="true" />
 
       {/* griglia di riferimento: quasi invisibile, ma è ciò che
           fa sembrare la pagina costruita invece che appoggiata */}
