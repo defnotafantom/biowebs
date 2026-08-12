@@ -155,5 +155,20 @@ export function costruisciElica(fattore = 1) {
      telecamera, così le misure apparenti nascono dalla distanza. */
   const caos = campoProspettico(N, 11, 18, 8.0, 32, 1.16)
 
-  return { n: N, caos, elica, misura, nascita, ritardo, pA, pB, pRitardo }
+  /* ── il fondale ───────────────────────────────────────────────
+     Dove finiscono le sfere quando l'elica si è dissolta, e dove
+     restano per tutto il resto del sito.
+
+     È lo stesso campo prospettico del caos iniziale, con due
+     differenze. La fascia centrale dello schermo è vuota al
+     quarantaquattro per cento — lì ci vanno i testi, e una sfera
+     dietro una parola resta un disturbo anche a fondo scala. E le
+     distanze partono da più lontano, così le poche che arrivano in
+     primo piano restano poche e stanno negli angoli.
+
+     È l'unico modo onesto per avere insieme le due cose che ha
+     chiesto: profondità vera e testo che si legge. */
+  const fondo = campoProspettico(N, 305, 18, 11.0, 40, 1.24, 0.44)
+
+  return { n: N, caos, fondo, elica, misura, nascita, ritardo, pA, pB, pRitardo }
 }

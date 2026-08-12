@@ -34,39 +34,27 @@ export const CAPITOLI = [
    si vede ma non si scorre */
 export const CODA = 1.0
 
-/* Quanto ogni sistema sta in PRIMO PIANO, capitolo per capitolo.
-   Non è più "c'è / non c'è": è una distanza.
+/* Che cosa c'è in scena, capitolo per capitolo.
 
-     elica    1 protagonista · 0,2 fondale lontano · 0 assente
-     disegno  0 assente · 1 presente
+     elica    1 la struttura è composta e in primo piano
+              0 le sfere sono disperse e fanno da fondale
+     vetrina  la colonna con l'ologramma dello strumento
 
-   Il cambio è quello chiesto guardando il video: l'elica non si
-   sgretola quando finisce l'apertura. Resta composta e ARRETRA.
-   Nella schermata dopo la si vede ancora, piccola e in fondo alla
-   nebbia, dietro il testo; poi si fa da parte per i disegni degli
-   strumenti; poi torna avanti sulle recensioni.
+   Le sfere ci sono SEMPRE. Non è più "compaiono e spariscono": si
+   radunano una volta nell'apertura, restano composte per tutto il
+   primo capitolo, e poi si sciolgono — e da lì in avanti sono il
+   fondo del sito, per sempre.
 
-   Sgretolarsi e ricomporsi a ogni capitolo era un effetto: la
-   figura si disfaceva perché sapevo farla disfare. Un oggetto che
-   resta e si allontana è invece un posto — te lo lasci indietro,
-   ma è sempre lì. */
+   È la differenza fra un effetto e un ambiente. Un effetto lo
+   accendi e lo spegni; un ambiente c'è e basta, e ogni tanto ti
+   accorgi che c'è. */
 export const SCENA = [
-  { elica: 1.00, disegno: 0 },   // 0 · apertura — protagonista
-  { elica: 0.28, disegno: 0 },   // 1 · chi sono — resta, ma lontana
-  /* Nei due capitoli dei disegni l'elica sparisce del tutto. A
-     0,16 restava un pulviscolo sparso su tutto lo schermo che si
-     sommava alle particelle del disegno, e due nuvole insieme
-     fanno confusione, non profondità. Qui il soggetto è lo
-     strumento: tutto il resto si toglie di mezzo. */
-  { elica: 0.00, disegno: 1 },   // 2 · strumentazione
-  { elica: 0.00, disegno: 1 },   // 3 · la tua condizione
-  { elica: 0.30, disegno: 0 },   // 4 · prenota — riaffiora
-  /* Sulle recensioni torna, ma non del tutto in primo piano: qui
-     c'è da leggere il giudizio di qualcuno, che è la cosa più
-     importante della pagina per chi sta ancora decidendo. A uno
-     l'elica riempiva mezzo schermo e la recensione diventava una
-     didascalia. */
-  { elica: 0.62, disegno: 0 },   // 5 · recensioni — torna la firma
+  { elica: 1, vetrina: 0 },   // 0 · apertura — si radunano
+  { elica: 1, vetrina: 0 },   // 1 · chi sono — resta, poi si scioglie
+  { elica: 0, vetrina: 1 },   // 2 · strumentazione — la vetrina
+  { elica: 0, vetrina: 0 },   // 3 · la tua condizione — solo fondale
+  { elica: 0, vetrina: 0 },   // 4 · prenota — solo fondale
+  { elica: 0, vetrina: 0 },   // 5 · recensioni — solo fondale
 ]
 
 export function inizioDi(indice) {

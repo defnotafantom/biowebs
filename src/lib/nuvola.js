@@ -54,13 +54,24 @@ function casuale(i) {
  * @param {number} vicino  distanza minima — sotto, diventano enormi
  * @param {number} lontano distanza massima — oltre, le mangia la nebbia
  * @param {number} bordo   quanto debordano: 1 = a filo, 1,2 = un po' fuori
+ * @param {number} vuoto   quanta parte centrale dello schermo lasciare
+ *   libera, da 0 a 1. Serve al fondale: le particelle stanno negli
+ *   angoli e ai bordi, dove non c'è niente da leggere, e il centro
+ *   resta al testo. Senza, un fondo di sfere è solo un fondo sporco.
  */
-export function campoProspettico(n, seme, camZ, vicino, lontano, bordo = 1.14) {
+export function campoProspettico(n, seme, camZ, vicino, lontano, bordo = 1.14, vuoto = 0) {
   const p = new Float32Array(n * 3)
   for (let i = 0; i < n; i++) {
     /* dove sta sullo schermo, da bordo a bordo */
-    const u = (casuale(i * 1.7 + seme) * 2 - 1) * bordo
-    const v = (casuale(i * 3.1 + seme + 1) * 2 - 1) * bordo
+    let u = (casuale(i * 1.7 + seme) * 2 - 1) * bordo
+    let v = (casuale(i * 3.1 + seme + 1) * 2 - 1) * bordo
+    if (vuoto > 0) {
+      /* si spinge tutto verso i bordi lasciando sgombra la fascia
+         centrale, senza però ammassare tutti sul filo del bordo:
+         la parte casuale resta, cambia solo da dove parte */
+      u = Math.sign(u || 1) * (vuoto + (1 - vuoto) * Math.abs(u))
+      v = Math.sign(v || 1) * (vuoto * 0.72 + (1 - vuoto * 0.72) * Math.abs(v))
+    }
 
     /* Quanto è lontana. La radice sposta il grosso verso il fondo:
        le vicine devono essere poche — una sfera enorme in primo

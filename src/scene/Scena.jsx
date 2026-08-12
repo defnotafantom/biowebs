@@ -3,7 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer, AdaptiveDpr } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import ElicaScena from './ElicaScena'
-import Disegno from './Disegno'
+import Vetrina from './Vetrina'
 import { scroll, clamp, morbida, mescola } from '../lib/scroll'
 import { schermo, scena } from '../lib/schermo'
 
@@ -123,9 +123,11 @@ export default function Scena({ mouse }) {
         <Lightformer form="rect" intensity={1.1} color="#2A5A44" position={[0, -8, 0]} scale={[16, 9, 1]} rotation={[Math.PI / 2, 0, 0]} />
       </Environment>
 
-      {/* l'elica apre e chiude, i disegni tengono il centro */}
+      {/* Le sfere ci sono sempre: si radunano nell'apertura, poi
+          si sciolgono e restano come fondo del sito. La vetrina
+          compare solo sulla strumentazione. */}
       <ElicaScena mouse={mouse} />
-      <Disegno mouse={mouse} />
+      <Vetrina />
 
       {/* il bagliore costa caro: sui dispositivi leggeri resta solo
           la vignettatura, che non pesa nulla */}

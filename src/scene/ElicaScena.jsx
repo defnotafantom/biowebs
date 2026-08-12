@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { scroll, clamp, morbida, mescola } from '../lib/scroll'
+import { scroll, clamp, fascia, morbida, mescola } from '../lib/scroll'
 import { schermo, scena, quantita } from '../lib/schermo'
 /* I nomi di questi due file sono scelti per non somigliarsi:
    "ElicaScena" il componente, "geometria-elica" i dati. Su Windows
@@ -11,7 +11,7 @@ import { schermo, scena, quantita } from '../lib/schermo'
    spinner senza un errore in console e con una richiesta 503 che si
    vedeva solo guardando la rete. */
 import { costruisciElica, caso, PIOLI } from './geometria-elica'
-import { presenzaScena } from '../lib/capitoli'
+
 
 /* ═══════════════════════════════════════════════════════════════
    L'ELICA
@@ -76,13 +76,30 @@ function arrivo(s, cap) {
   return 1
 }
 
-/* Si compone UNA VOLTA SOLA, nell'apertura, e da lì in poi resta
-   composta per sempre. Prima si sfaldava alla fine di ogni
-   capitolo e si rifaceva al successivo: un effetto ripetuto è un
-   tic. Adesso quello che cambia è quanto è lontana. */
-function raduno(s, cap) {
+/* RADUNO — 0 sfere sparse, 1 struttura composta.
+
+   Si compone una volta sola nell'apertura, RESTA COMPOSTA per
+   tutto il primo capitolo — è lì che il testo dell'apertura se ne
+   va verso l'alto e la struttura si prolunga da una schermata
+   all'altra — e si scioglie solo alla fine, tornando com'era
+   all'inizio. Da lì in poi non si ricompone più.
+
+   Sciogliersi e ricomporsi a ogni capitolo era un effetto: la
+   figura si disfaceva perché sapevo farla disfare. Una cosa che
+   accade una volta sola è un fatto. */
+function raduno(s, cap, q) {
   if (cap === 0) return clamp((s - 1.00) / 1.70)
-  return 1
+  if (cap === 1) return 1 - morbida(fascia(q, 0.52, 0.94))
+  return 0
+}
+
+/* Quanto è salita verso l'alto. Nel primo capitolo la struttura
+   scorre fuori dall'inquadratura dal basso verso l'alto: di lei
+   resta visibile la coda, in alto a destra, e si capisce che è la
+   stessa cosa di prima vista da più giù. */
+function salita(cap, q) {
+  if (cap !== 1) return 0
+  return morbida(fascia(q, 0.02, 0.52))
 }
 
 /* quanto dura la comparsa di una singola sfera, in unità di arrivo */
@@ -163,14 +180,21 @@ export default function ElicaScena({ mouse }) {
     if (!m || !gr) return
     const tempo = clock.elapsedTime
     const cap = scroll.capitolo
-    const r = raduno(scroll.schermate, cap)
+    const r = raduno(scroll.schermate, cap, scroll.q)
     const a = arrivo(scroll.schermate, cap)
-    /* quanto è in primo piano: 1 protagonista, 0,16 fondale */
-    const avanti = presenzaScena('elica', cap, scroll.q)
-    gr.visible = avanti > 0.02
-    if (!gr.visible) return
+    const su = salita(cap, scroll.q)
+    /* Verso il fondale: le sfere disperse non tornano dove erano
+       all'inizio ma in un campo diverso, con la fascia centrale
+       vuota. È lo stesso disordine, sistemato in modo da non
+       finire mai sopra una parola. */
+    const versoFondo = cap === 0 ? 0 : cap === 1 ? morbida(fascia(scroll.q, 0.52, 1)) : 1
+    /* Non si nasconde mai: da qui in poi le sfere SONO il fondo del
+       sito. Sono centotrentaquattro, costano un disegno solo, e
+       spegnerle per riaccenderle sarebbe più codice per un
+       risultato peggiore. */
+    gr.visible = true
 
-    const { caos, elica, misura, nascita, ritardo } = dati
+    const { caos, fondo, elica, misura, nascita, ritardo } = dati
     const { fase, curva } = tratti
     const mat = m.instanceMatrix.array
 
@@ -186,7 +210,10 @@ export default function ElicaScena({ mouse }) {
       const t = morbida(clamp((r - ritardo[i]) / (1 - ritardo[i])))
       const u = 1 - t
 
-      const ax = caos[j], ay = caos[j + 1], az = caos[j + 2]
+      const vf = versoFondo
+      const ax = caos[j] + (fondo[j] - caos[j]) * vf
+      const ay = caos[j + 1] + (fondo[j + 1] - caos[j + 1]) * vf
+      const az = caos[j + 2] + (fondo[j + 2] - caos[j + 2]) * vf
       const bx = elica[j], by = elica[j + 1], bz = elica[j + 2]
       const cx = (ax + bx) * 0.5 + curva[j]
       const cy = (ay + by) * 0.5 + curva[j + 1]
@@ -203,7 +230,10 @@ export default function ElicaScena({ mouse }) {
       const py = (ay * w0 + cy * w1 + by * w2) * fuori + Math.cos(tempo * 0.42 + fase[i]) * vita
       const pz = (az * w0 + cz * w1 + bz * w2) * fuori + Math.sin(tempo * 0.46 + fase[i] * 1.4) * vita
 
-      const s = misura[i] * vn
+      /* Da fondale le sfere sono poco più di metà: devono esserci
+         e non farsi notare. È l'unica cosa che le distingue dalle
+         stesse sfere dell'apertura, dove riempivano lo schermo. */
+      const s = misura[i] * vn * mescola(0.58, 1, r)
       mat[o] = s; mat[o + 5] = s; mat[o + 10] = s
       mat[o + 12] = px; mat[o + 13] = py; mat[o + 14] = pz
     }
@@ -258,37 +288,27 @@ export default function ElicaScena({ mouse }) {
 
     const kx = 1 - Math.exp(-dt * 2)
 
-    /* Nell'apertura lo spostamento a destra segue il raduno: da
-       sparse stanno al centro e occupano tutto lo schermo — il
-       vuoto va riempito per intero, se no metà pagina è morta — e
-       mentre si radunano scivolano a destra a fare posto al nome.
-       Il compattarsi e il farsi da parte sono lo stesso gesto.
+    /* Lo spostamento a destra segue il raduno: da sparse stanno al
+       centro e occupano tutto lo schermo — il vuoto va riempito
+       per intero, se no metà pagina è morta — e mentre si radunano
+       scivolano a destra a fare posto al nome. Il compattarsi e il
+       farsi da parte sono lo stesso gesto.
 
-       Da fondale va ancora più a destra: lì sotto c'è del testo da
-       leggere, e una sfera dietro una parola resta una sfera
-       dietro una parola anche se è sfocata. */
-    /* Da fondale torna verso il centro: lì c'è il velo a spegnerla,
-       mentre sulla destra ci sono i contatti e il riquadro del
-       ritratto, cioè roba da leggere. */
-    const largo = schermo.stretto ? 0 : mescola(1.9, 2.7, avanti)
-    const bx2 = schermo.stretto ? 0 : (cap === 0 ? 2.7 * r : largo)
+       E quando si sciolgono tornano al centro da sole, perché r
+       torna a zero: da fondale devono coprire tutto il fotogramma,
+       che è il motivo per cui il campo del fondale ha la fascia
+       centrale vuota invece di stare tutto da una parte. */
+    const bx2 = schermo.stretto ? 0 : 2.7 * r
 
-    /* La presenza non rimpicciolisce più le sfere: le ALLONTANA.
-       Rimpicciolire fa un modellino che si sgonfia; allontanare fa
-       un oggetto che resta com'è e va in fondo — e la nebbia, che
-       è tarata sulla distanza della telecamera, lo spegne da sola
-       senza bisogno di trasparenze che costano care. */
-    /* Ventuno unità di arretramento, non nove. A nove restava un
-       oggetto grosso e riconoscibile piantato sopra il testo: era
-       ancora protagonista, solo un po' più in là. A ventuno la
-       nebbia se la mangia all'ottanta per cento e diventa quello
-       che deve essere — un fondo, una cosa che sai che c'è. */
-    const bz = mescola(-21, 0, avanti)
-    const bs = (schermo.stretto ? 0.40 : 1) * mescola(0.50, 1, avanti)
+    /* La salita è moltiplicata per il raduno: mentre la struttura
+       si scioglie ridiscende, e i pezzi si spargono sul fotogramma
+       invece di restare ammucchiati fuori campo. */
+    const by = scena.alto + 9.2 * su * r
+    const bs = schermo.stretto ? mescola(1, 0.40, r) : 1
 
     gr.position.x += (bx2 - gr.position.x) * kx
-    gr.position.y += (scena.alto - gr.position.y) * kx
-    gr.position.z += (bz - gr.position.z) * kx
+    gr.position.y += (by - gr.position.y) * kx
+    gr.position.z += (0 - gr.position.z) * kx
     gr.scale.setScalar(gr.scale.x + (bs - gr.scale.x) * kx)
   })
 
