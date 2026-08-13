@@ -3,7 +3,17 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: { host: true, open: true },
+  server: { 
+    host: true, 
+    open: true, 
+    allowedHosts: [
+      '.ngrok-free.dev',
+      '.ngrok-free.app'
+    ],
+    headers: {
+      'ngrok-skip-browser-warning': 'true' // <--- Aggiunto per bypassare la schermata di blocco di ngrok
+    }
+  },
 
   build: {
     /* il grosso del peso è Three.js e non si può evitare: è la
