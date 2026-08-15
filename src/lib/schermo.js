@@ -19,7 +19,7 @@ export const schermo = {
 /* Scritti dalla telecamera a ogni fotogramma, letti dai due sistemi
    della scena: dove sta il centro dell'inquadratura e quanto è
    grande. Serve perché su telefono la scena non sta al centro. */
-export const scena = { z: 12, alto: 0, larghezza: 13, altezza: 7.3 }
+export const scena = { z: 12, alto: 0, larghezza: 13, altezza: 7.3, aspetto: 1.8 }
 
 export function misuraSchermo() {
   if (typeof window === 'undefined') return

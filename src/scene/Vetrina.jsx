@@ -217,7 +217,7 @@ export default function Vetrina() {
     depthWrite: false, blending: THREE.AdditiveBlending,
   }), [])
 
-  useFrame(({ clock, camera, size }, dt) => {
+  useFrame(({ clock, camera, gl, size }, dt) => {
     const gr = gruppo.current
     if (!gr) return
 
@@ -255,6 +255,10 @@ export default function Vetrina() {
              invisibile per due giorni, e da qui si vede subito. */
           aspettoFinestra: +(size.width / size.height).toFixed(3),
           aspettoTelecamera: +camera.aspect.toFixed(3),
+          /* la misura vera dell'elemento canvas sullo schermo: è
+             questa la verità, non size */
+          tela: gl.domElement.clientWidth + '×' + gl.domElement.clientHeight,
+          zoom: +(window.devicePixelRatio || 1).toFixed(3),
         }
       }
     }

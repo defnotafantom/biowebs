@@ -31,45 +31,78 @@ const TANG = Math.tan((34 / 2) * Math.PI / 180)
 
 const _misura = new THREE.Vector2()
 
-function Telecamera() {
-  useFrame(({ camera, gl, size }, dt) => {
-    /* ── la tela e la telecamera devono avere la stessa forma ────
-       Questa è la riga che mancava, e da sola spiega la vetrina
-       invisibile.
+/* ═══════════════════════════════════════════════════════════════
+   LA SINCRONIA
+   Tela, telecamera e post-produzione devono avere tutte la stessa
+   forma, e quella forma è una sola: quanto misura DAVVERO
+   l'elemento canvas sullo schermo.
 
-       Dal rapporto in console: la finestra era 1905×945, cioè
-       rapporto 2,016, ma la matrice di proiezione della telecamera
-       era tarata su 1,429 — che è 1350×945. Cinquecentocinquanta
-       pixel di tela sulla destra, dal 71% in poi, fuori dalla zona
-       che veniva disegnata: mai scritti, quindi neri. E la vetrina
-       sta al 74,8%. Non era invisibile: era fuori dall'area
-       disegnata.
+   Sembra ovvio e invece è il difetto che ha tenuto la vetrina
+   invisibile per due giorni. Il rapporto dalla console diceva:
+   finestra 1905×945 (rapporto 2,016) ma matrice di proiezione
+   tarata su 1,429, cioè su una tela larga 1350. Una fetta di scena
+   larga cinquecento pixel che non veniva disegnata, e la vetrina
+   che ci cadeva dentro.
 
-       Succede quando la finestra cambia misura e la rimisurazione
-       di react-three-fiber non arriva — massimizzare, cambiare
-       schermo, aprire gli strumenti di sviluppo. Il sito continua
-       a girare senza un errore, con una fetta di scena in meno, e
-       non se ne accorge nessuno perché di solito lì non c'è niente
-       di importante.
+   La causa è lo zoom del browser, come aveva intuito il
+   committente. Cambiare zoom cambia quanti pixel CSS misura la
+   finestra e cambia devicePixelRatio, ma non sempre fa scattare la
+   rimisurazione di react-three-fiber: il canvas resta della
+   misura di prima, e da lì in poi la scena vive in un fotogramma
+   di forma sbagliata. Al 25% di zoom infatti la vetrina ricompare,
+   perché la forma torna per caso a coincidere.
 
-       Qui non ci si affida più a nessuno: a ogni fotogramma si
-       confronta la forma vera con quella della telecamera, e se
-       divergono si correggono. Costa due confronti fra numeri. */
-    const aspettoVero = size.width / Math.max(1, size.height)
-    if (Math.abs(camera.aspect - aspettoVero) > 0.0005) {
-      camera.aspect = aspettoVero
+   Il rimedio non è aggiustare `size`: è smettere di fidarsene.
+   Qui la verità è clientWidth dell'elemento — quanto occupa sullo
+   schermo, adesso — e tutto il resto si allinea a quello.
+   ═══════════════════════════════════════════════════════════════ */
+function Sincronia({ composta }) {
+  const conta = useRef(0)
+
+  useFrame(({ gl, camera }) => {
+    /* leggere clientWidth costringe il browser a calcolare
+       l'impaginazione, quindi non lo si fa sessanta volte al
+       secondo: un controllo ogni dieci fotogrammi è un sesto di
+       secondo, e nessuno ridimensiona una finestra più in fretta */
+    if (conta.current++ % 10) return
+
+    const tela = gl.domElement
+    const w = tela.clientWidth
+    const h = tela.clientHeight
+    if (w < 2 || h < 2) return
+
+    const a = w / h
+    scena.aspetto = a
+
+    if (Math.abs(camera.aspect - a) > 0.0005) {
+      camera.aspect = a
       camera.updateProjectionMatrix()
     }
-    gl.getSize(_misura)
-    if (_misura.x !== size.width || _misura.y !== size.height) {
-      /* false: non tocca lo stile CSS dell'elemento, cambia solo
-         la zona che si disegna. Lo stile lo tiene già React. */
-      gl.setSize(size.width, size.height, false)
-    }
 
+    gl.getSize(_misura)
+    if (Math.abs(_misura.x - w) > 1 || Math.abs(_misura.y - h) > 1) {
+      /* false: non tocca lo stile CSS dell'elemento — quello lo
+         tiene React — cambia solo la zona che si disegna */
+      gl.setSize(w, h, false)
+      /* E anche la post-produzione, che ha i suoi buffer: se
+         restano della misura vecchia, il risultato finale viene
+         ricopiato sulla tela storto o tagliato, ed è l'altra metà
+         del difetto. */
+      if (composta.current && composta.current.setSize) {
+        composta.current.setSize(w, h)
+      }
+    }
+  })
+  return null
+}
+
+function Telecamera() {
+  useFrame(({ camera }, dt) => {
     const cap = scroll.capitolo
     const q = morbida(scroll.q)
-    const aspetto = aspettoVero
+    /* dalla sincronia, non da size: è l'unico numero che segue lo
+       zoom del browser senza saltare un giro */
+    const aspetto = scena.aspetto
 
     let z, y
     if (schermo.stretto) {
@@ -163,6 +196,9 @@ function prova(nome) {
 export default function Scena({ mouse }) {
   const senzaBloom = prova('nobloom')
   const senzaPost = prova('nopost')
+  /* serve alla sincronia: quando la tela cambia misura vanno
+     ridimensionati anche i buffer della post-produzione */
+  const composta = useRef()
 
   return (
     <Canvas
@@ -176,6 +212,9 @@ export default function Scena({ mouse }) {
       style={{ position: 'fixed', inset: 0, zIndex: 0 }}
     >
       <color attach="background" args={['#04120D']} />
+      {/* per prima, se no la telecamera lavora un fotogramma con
+          la forma vecchia */}
+      <Sincronia composta={composta} />
       <Atmosfera />
       <Telecamera />
 
@@ -202,7 +241,7 @@ export default function Scena({ mouse }) {
       {/* il bagliore costa caro: sui dispositivi leggeri resta solo
           la vignettatura, che non pesa nulla */}
       {!senzaPost && (
-        <EffectComposer disableNormalPass multisampling={0}>
+        <EffectComposer ref={composta} disableNormalPass multisampling={0}>
           {(schermo.leggero || senzaBloom)
             ? <Vignette offset={0.28} darkness={0.74} />
             : (
