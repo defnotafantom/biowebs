@@ -258,6 +258,9 @@ export default function Vetrina() {
           /* la misura vera dell'elemento canvas sullo schermo: è
              questa la verità, non size */
           tela: gl.domElement.clientWidth + '×' + gl.domElement.clientHeight,
+          /* il riquadro vero: tela e riquadro DEVONO coincidere */
+          riquadro: document.documentElement.clientWidth + '×'
+            + document.documentElement.clientHeight,
           zoom: +(window.devicePixelRatio || 1).toFixed(3),
         }
       }

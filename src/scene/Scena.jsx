@@ -46,15 +46,33 @@ const _misura = new THREE.Vector2()
 
    La causa è lo zoom del browser, come aveva intuito il
    committente. Cambiare zoom cambia quanti pixel CSS misura la
-   finestra e cambia devicePixelRatio, ma non sempre fa scattare la
-   rimisurazione di react-three-fiber: il canvas resta della
-   misura di prima, e da lì in poi la scena vive in un fotogramma
-   di forma sbagliata. Al 25% di zoom infatti la vetrina ricompare,
-   perché la forma torna per caso a coincidere.
+   finestra, ma non sempre fa scattare la rimisurazione di
+   react-three-fiber: l'elemento canvas si ferma alla misura di
+   prima e da lì in poi la scena vive in un fotogramma di forma
+   sbagliata.
 
-   Il rimedio non è aggiustare `size`: è smettere di fidarsene.
-   Qui la verità è clientWidth dell'elemento — quanto occupa sullo
-   schermo, adesso — e tutto il resto si allinea a quello.
+   ── e adesso la parte che avevo sbagliato ──────────────────────
+   Al primo tentativo avevo preso come verità clientWidth della
+   TELA. È l'errore: dal rapporto in console la finestra misurava
+   7620×3780 e la tela 1350×945 — la tela era il pezzo rotto, e
+   allineandoci quello la sincronia certificava il guasto invece
+   di ripararlo. Peggio: chiamavo setSize con updateStyle a FALSE,
+   cioè "non toccare lo stile CSS della tela", che è esattamente
+   la cosa da correggere. Era una correzione che si mordeva la
+   coda.
+
+   La verità non è la tela: è il RIQUADRO DI VISUALIZZAZIONE.
+   document.documentElement.clientWidth dà la finestra al netto
+   delle barre di scorrimento, che è per definizione quanto misura
+   un elemento in position:fixed con inset:0 — cioè quanto DEVE
+   misurare la tela. Da lì si correggono, in quest'ordine: lo
+   stile CSS della tela, la zona disegnata, la telecamera e i
+   buffer della post-produzione.
+
+   Così il controllo non è più una taratura: è una riparazione. Se
+   qualcosa sfasa la tela — zoom, cambio di schermo, strumenti di
+   sviluppo che si aprono — entro un sesto di secondo torna a
+   posto da sola, e non serve che nessuno se ne accorga.
    ═══════════════════════════════════════════════════════════════ */
 function Sincronia({ composta }) {
   const conta = useRef(0)
@@ -66,9 +84,12 @@ function Sincronia({ composta }) {
        secondo, e nessuno ridimensiona una finestra più in fretta */
     if (conta.current++ % 10) return
 
-    const tela = gl.domElement
-    const w = tela.clientWidth
-    const h = tela.clientHeight
+    /* la finestra al netto delle barre di scorrimento: è quanto
+       misura un elemento fisso a tutto schermo, quindi è quanto
+       deve misurare la tela */
+    const doc = document.documentElement
+    const w = doc.clientWidth
+    const h = doc.clientHeight
     if (w < 2 || h < 2) return
 
     const a = w / h
@@ -79,15 +100,23 @@ function Sincronia({ composta }) {
       camera.updateProjectionMatrix()
     }
 
+    const tela = gl.domElement
     gl.getSize(_misura)
-    if (Math.abs(_misura.x - w) > 1 || Math.abs(_misura.y - h) > 1) {
-      /* false: non tocca lo stile CSS dell'elemento — quello lo
-         tiene React — cambia solo la zona che si disegna */
-      gl.setSize(w, h, false)
+    const disegnoSbagliato = Math.abs(_misura.x - w) > 1 || Math.abs(_misura.y - h) > 1
+    /* e questo è il controllo che mancava del tutto: non basta che
+       sia giusta la zona disegnata, deve essere giusta anche la
+       misura dell'elemento sulla pagina */
+    const telaSbagliata = Math.abs(tela.clientWidth - w) > 1 || Math.abs(tela.clientHeight - h) > 1
+
+    if (disegnoSbagliato || telaSbagliata) {
+      /* true, non false: aggiorna ANCHE lo stile CSS della tela.
+         È la differenza fra una correzione che ripara e una che
+         si adegua al guasto. */
+      gl.setSize(w, h, true)
       /* E anche la post-produzione, che ha i suoi buffer: se
          restano della misura vecchia, il risultato finale viene
-         ricopiato sulla tela storto o tagliato, ed è l'altra metà
-         del difetto. */
+         ricopiato sulla tela tagliato, ed è l'altra metà del
+         difetto. */
       if (composta.current && composta.current.setSize) {
         composta.current.setSize(w, h)
       }
