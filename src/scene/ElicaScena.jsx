@@ -37,30 +37,44 @@ import { costruisciElica, caso } from './geometria-elica'
    a una gialla accesa. Prima variavo la luminosità di sei
    centesimi e sembravano lo stesso frutto in copie; adesso di
    venti, e ogni sfera ha il suo peso. */
+/* ── la tavolozza, campionata dal video ──────────────────────────
+   Non l'ho scelta: l'ho MISURATA. Ho preso i fotogrammi con
+   l'elica composta, tolto i pixel del fondo e quelli dei riflessi
+   speculari, e ridotto il resto a dieci tinte. È venuto fuori:
+
+     ~40 %  verdi oliva e muschio
+     ~35 %  rossi mattone, granata, terra bruciata
+     ~25 %  crema, cachi, ambra spenta
+
+   e nessun pixel oltre 0xCA su nessun canale. Cioè: una tavolozza
+   SCURA e SPENTA, con tanto verde.
+
+   Quella che avevo era dodici tinte fra il rosso e il giallo, con
+   #FF2E14 e #FFA607 in cima — fuoco puro, saturo al massimo. Sul
+   verde quasi nero del fondo diventava una manciata di caramelle
+   fluorescenti, ed è metà del motivo per cui l'elica risultava
+   "orribile": la forma era discutibile, il colore era un altro
+   sito. Qui la frutta è matura e fotografata in penombra, non
+   frutta da insegna luminosa. */
 const FRUTTA = [
-  '#FF2E14', // pomodoro maturo
-  '#FF6A00', // arancia
-  '#FFA607', // ambra
-  '#FFC81C', // susina gialla
-  '#FF8A2B', // mandarino
-  '#E80F3C', // melograno
-  '#FF4D18', // peperone
-  '#FFD93B', // pesca gialla
-  '#C25A18', // rame
-  '#A8481B', // dattero
-  '#C9D62A', // lime maturo
-  '#8E9B24', // oliva matura
+  '#8E3B23', // mattone
+  '#6B2A1C', // granata scuro
+  '#A5522B', // terracotta
+  '#9C3A2A', // ruggine
+  '#5E6B2A', // oliva
+  '#7C8A3A', // muschio
+  '#3F4C1E', // oliva scurissima
+  '#8A9440', // pisello maturo
+  '#C9B96B', // cachi
+  '#D9CE92', // crema
+  '#B08A3E', // ambra spenta
+  '#4A3520', // cioccolato
 ].map((c) => new THREE.Color(c))
 
-/* I chicchi: grano, avena, sesamo. Poca varietà, tutta calda.
-
-   Non sono un colore di servizio: sono il TRATTO. Le corde e i
-   pioli sono fatti solo di questi, e devono leggersi come una
-   linea chiara continua contro il verde scuro — chiara abbastanza
-   da tenere il disegno, spenta abbastanza da non rubare la scena
-   ai frutti. */
-const CHICCHI = ['#F3D9A0', '#E8C482', '#FBEDCB', '#DCB870']
-  .map((c) => new THREE.Color(c))
+/* I bastoncini: paglia spenta. Una tinta sola, e più scura della
+   crema delle sfere — nel video sono chiaramente più smorti dei
+   frutti chiari, non ci gareggiano. Devono solo esserci. */
+const PAGLIA = new THREE.Color('#B9A776')
 
 /* ── i due tempi ───────────────────────────────────────────────
    ARRIVO   quante sfere ci sono. Da una ventina a centotrentaquattro.
@@ -152,10 +166,18 @@ const NASCITA = 0.26
    già muovendo da un pezzo. */
 const DA_LONTANO = 28
 
-/* riutilizzato a ogni fotogramma dal piano di taglio: allocarlo
-   dentro il ciclo vorrebbe dire creare un oggetto sessanta volte
-   al secondo per buttarlo via subito */
+/* riutilizzati a ogni fotogramma: allocarli dentro il ciclo
+   vorrebbe dire creare oggetti sessanta volte al secondo per
+   buttarli via subito */
 const _n = new THREE.Vector3()
+const _a = new THREE.Vector3()
+const _b = new THREE.Vector3()
+const _dir = new THREE.Vector3()
+const _su = new THREE.Vector3(0, 1, 0)
+const _pos = new THREE.Vector3()
+const _rot = new THREE.Quaternion()
+const _sc = new THREE.Vector3()
+const _mat4 = new THREE.Matrix4()
 
 /* ── la riga del taglio, e perché non era una riga ──────────────
    Il taglio si faceva con un piano orizzontale del mondo, y = k.
@@ -189,6 +211,7 @@ function orientaTaglio(piano, camera, frazione) {
 export default function ElicaScena({ mouse }) {
   const gruppo = useRef()
   const rete = useRef()
+  const barre = useRef()
   const inclina = useRef({ x: 0, z: 0 })
 
   /* Il piano che taglia. Si costruisce una volta e non si sostituisce
@@ -200,6 +223,7 @@ export default function ElicaScena({ mouse }) {
 
   const dati = useMemo(() => costruisciElica(quantita()), [])
   const n = dati.n
+  const nPioli = dati.nPioli
 
   /* L'ultimo valore scritto nel CSS. Serve solo a non riscriverlo
      sessanta volte al secondo con lo stesso numero: cambiare una
@@ -224,26 +248,23 @@ export default function ElicaScena({ mouse }) {
     return { fase, curva }
   }, [n])
 
-  /* Ogni frutto un frutto diverso, ogni chicco un cereale. Con due
-     soli colori l'elica sembra fatta di biglie: la varietà non è
-     decorazione, è quello che la fa leggere come cibo. */
   const base = useMemo(() => {
     const c = new Float32Array(n * 3)
     const t = new THREE.Color()
     for (let i = 0; i < n; i++) {
-      if (dati.grande[i]) {
-        t.copy(FRUTTA[Math.floor(caso(i * 5.1 + 81) * FRUTTA.length) % FRUTTA.length])
-        /* i frutti vicini fra loro non devono essere gemelli */
-        t.offsetHSL((caso(i * 2.7 + 84) - 0.5) * 0.025, 0.12, (caso(i * 6.1 + 85) - 0.5) * 0.06)
-      } else {
-        t.copy(CHICCHI[Math.floor(caso(i * 7.3 + 82) * CHICCHI.length) % CHICCHI.length])
-        t.offsetHSL(0, 0.06, (caso(i * 4.3 + 86) - 0.5) * 0.07)
-      }
-      const v = 1.10 + caso(i * 3.9 + 83) * 0.20
+      t.copy(FRUTTA[Math.floor(caso(i * 5.1 + 81) * FRUTTA.length) % FRUTTA.length])
+      /* Lo scarto sul CHIARO è quello che dà la varietà, non il
+         numero di tinte: una granata quasi nera accanto a una crema
+         accesa. Sulla saturazione invece adesso si toglie invece di
+         aggiungere: prima c'era un +0,10 che spingeva ogni tinta
+         verso il fluorescente, ed è esattamente quello che nel
+         video non c'è. */
+      t.offsetHSL((caso(i * 2.7 + 84) - 0.5) * 0.03, -0.04, (caso(i * 6.1 + 85) - 0.5) * 0.20)
+      const v = 0.94 + caso(i * 3.9 + 83) * 0.18
       c[i * 3] = t.r * v; c[i * 3 + 1] = t.g * v; c[i * 3 + 2] = t.b * v
     }
     return c
-  }, [n, dati])
+  }, [n])
 
   useLayoutEffect(() => {
     const m = rete.current
@@ -256,6 +277,10 @@ export default function ElicaScena({ mouse }) {
        perché una cosa non succede. */
     m.material.clippingPlanes = [piano]
     m.material.needsUpdate = true
+    if (barre.current) {
+      barre.current.material.clippingPlanes = [piano]
+      barre.current.material.needsUpdate = true
+    }
     m.instanceMatrix.array.fill(0)
     const c = new THREE.Color()
     for (let i = 0; i < n; i++) {
@@ -265,7 +290,13 @@ export default function ElicaScena({ mouse }) {
     }
     m.instanceMatrix.needsUpdate = true
     if (m.instanceColor) m.instanceColor.needsUpdate = true
-  }, [n, base, piano])
+
+    const bb = barre.current
+    if (bb) {
+      for (let i = 0; i < nPioli; i++) bb.setColorAt(i, PAGLIA)
+      if (bb.instanceColor) bb.instanceColor.needsUpdate = true
+    }
+  }, [n, nPioli, base, piano])
 
   useFrame(({ clock, camera }, dt) => {
     const m = rete.current
@@ -287,7 +318,7 @@ export default function ElicaScena({ mouse }) {
        risultato peggiore. */
     gr.visible = true
 
-    const { caos, fondo, elica, misura, nascita, ritardo, grande } = dati
+    const { caos, fondo, elica, misura, nascita, ritardo } = dati
     const { fase, curva } = tratti
     const mat = m.instanceMatrix.array
 
@@ -334,17 +365,58 @@ export default function ElicaScena({ mouse }) {
          serve rimpicciolirla anche. Se parte da zero, il momento
          in cui diventa visibile è anche il momento in cui è più
          piccola, e si legge come "pop". */
-      /* Da fondale i frutti si ritirano a poco più di metà: devono
-         esserci e non farsi notare. I chicchi no — sono già
-         puntini, e rimpicciolirli ancora vorrebbe dire cancellarli.
-         È la polvere fine sul fondo, e senza quella il fondale
-         diventa una manciata di palle sospese nel nulla. */
-      const s = misura[i] * mescola(0.7, 1, vn)
-        * (grande[i] ? mescola(0.58, 1, r) : mescola(0.94, 1, r))
+      /* Da fondale le sfere sono poco più di metà: devono esserci e
+         non farsi notare. È l'unica cosa che le distingue dalle
+         stesse sfere dell'apertura, dove riempivano lo schermo.
+
+         La misura non parte da zero ma dal settanta per cento: a
+         quella distanza è comunque un puntino nella nebbia. Se
+         partisse da zero, il momento in cui diventa visibile
+         sarebbe anche quello in cui è più piccola, e si leggerebbe
+         come un "pop". */
+      const s = misura[i] * mescola(0.7, 1, vn) * mescola(0.58, 1, r)
       mat[o] = s; mat[o + 5] = s; mat[o + 10] = s
       mat[o + 12] = px; mat[o + 13] = py; mat[o + 14] = pz
     }
     m.instanceMatrix.needsUpdate = true
+
+    /* ── i bastoncini ──────────────────────────────────────────
+       Ognuno cresce dalla propria metà verso le due estremità, e
+       quelli al centro dell'elica partono per primi: la struttura
+       si costruisce dal mezzo. Prima di essere cresciuti hanno
+       lunghezza zero, cioè non ci sono. */
+    const bb = barre.current
+    if (bb) {
+      const { pA, pB, pRitardo } = dati
+      for (let i = 0; i < nPioli; i++) {
+        const cresce = morbida(clamp((r - pRitardo[i]) / 0.22))
+        if (cresce <= 0.001) {
+          _mat4.makeScale(0, 0, 0)
+          bb.setMatrixAt(i, _mat4)
+          continue
+        }
+        _a.set(pA[i * 3], pA[i * 3 + 1], pA[i * 3 + 2])
+        _b.set(pB[i * 3], pB[i * 3 + 1], pB[i * 3 + 2])
+        /* respirano insieme alle sfere, se no la struttura sembra
+           un modellino incollato mentre tutto il resto vibra */
+        const w = Math.sin(tempo * 0.5 + i * 1.7) * 0.05
+        _a.y += w; _b.y -= w
+        _pos.addVectors(_a, _b).multiplyScalar(0.5)
+        _dir.subVectors(_b, _a)
+        const lungo = _dir.length()
+        _dir.normalize()
+        _rot.setFromUnitVectors(_su, _dir)
+        /* Quattro centesimi: nel video il bastoncino misura sette
+           pixel su un fotogramma da 1902, cioè meno di sei
+           centesimi di diametro. Sottili. A sette e mezzo, come li
+           avevo fatti ieri, diventavano travi e la figura sembrava
+           un'impalcatura invece di una molecola. */
+        _sc.set(0.04, lungo * cresce, 0.04)
+        _mat4.compose(_pos, _rot, _sc)
+        bb.setMatrixAt(i, _mat4)
+      }
+      bb.instanceMatrix.needsUpdate = true
+    }
 
     /* ── l'insieme ── */
     /* Da sparse non gira. Un campo con questa profondità, se ruota,
@@ -435,14 +507,12 @@ export default function ElicaScena({ mouse }) {
   return (
     <group ref={gruppo}>
       <instancedMesh ref={rete} args={[undefined, undefined, n]} frustumCulled={false}>
-        {/* Sedici per dodici. Seicentosessanta sfere di cui
-            seicentoventi sono puntini da pochi pixel: lì gli
-            spicchi non si contano, e spenderceli vorrebbe dire
-            duecentomila triangoli buttati. I quaranta frutti sono
-            gli unici che arrivano grossi, e a sedici spicchi il
-            bordo regge finché non riempiono mezzo schermo — cosa
-            che capita a uno o due, nel primo piano dell'apertura. */}
-        <sphereGeometry args={[1, 16, 12]} />
+        {/* Qui i poligoni contano: nel video le sfere in primo
+            piano arrivano a riempire un quarto di schermo, e a
+            quattordici spicchi il bordo si vedeva sfaccettato.
+            Centocinquanta sfere il conto se lo possono
+            permettere. */}
+        <sphereGeometry args={[1, 26, 18]} />
         {/* la velatura lucida sopra è quello che le fa sembrare
             frutta e non biglie di plastica */}
         <meshPhysicalMaterial
@@ -453,6 +523,19 @@ export default function ElicaScena({ mouse }) {
           envMapIntensity={1.3}
           sheen={0.45}
           sheenRoughness={0.55}
+        />
+      </instancedMesh>
+
+      <instancedMesh ref={barre} args={[undefined, undefined, nPioli]} frustumCulled={false}>
+        {/* cilindro di raggio e altezza uno: la matrice lo allunga
+            e lo orienta da una sfera all'altra */}
+        <cylinderGeometry args={[1, 1, 1, 10, 1]} />
+        <meshPhysicalMaterial
+          roughness={0.42}
+          metalness={0}
+          clearcoat={0.35}
+          envMapIntensity={1.0}
+          sheen={0.3}
         />
       </instancedMesh>
     </group>

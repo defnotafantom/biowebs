@@ -283,7 +283,11 @@ export default function Vetrina() {
       alone.current.material.opacity = (0.34 + 0.34 * v) * presenza
     }
     if (lampada.current) {
-      lampada.current.intensity = (16 + 26 * v) * presenza
+      /* Un terzo di prima. Con il decadimento lineare e la lampada
+         lontana dalle superfici questi numeri arrivano al massimo a
+         una ventina di unità di irradianza: dentro il campo del
+         Bloom, non oltre. */
+      lampada.current.intensity = (6 + 9 * v) * presenza
     }
 
     /* ── l'insieme ── */
@@ -348,8 +352,35 @@ export default function Vetrina() {
         <sphereGeometry args={[0.62, 32, 20]} />
       </mesh>
 
-      {/* ── la luce che sale dal cuscino ── */}
-      <pointLight ref={lampada} position={[0, 0.35, 0]} color={LUCE} distance={7} intensity={6} />
+      {/* ── la luce che sale dal cuscino ───────────────────────────
+          QUESTA RIGA MANDAVA NERO TUTTO LO SCHERMO.
+
+          Stava a y = 0,35. La cupola schiacciata del cuscino arriva
+          a 0,26: nove centesimi di distanza. Three, in luce
+          fisicamente corretta, attenua con 1/max(d², 0,01) — cioè
+          si ferma a moltiplicare per cento — e con l'intensità a
+          quarantadue quel pixel di stoffa valeva quattromiladuecento.
+
+          Il Bloom eleva al quadrato per calcolare la luminanza:
+          diciassette milioni, contro un buffer a mezza precisione
+          che arriva a 65504. Infinito. Poi mipmapBlur fa le medie
+          scendendo di mipmap, e un solo pixel infinito diventa NaN
+          su tutta la catena: il fotogramma intero esce nero.
+
+          È il motivo per cui "non si vedeva la vetrina" da computer
+          e si vedeva da telefono — sui dispositivi leggeri il Bloom
+          non c'è, resta solo la vignettatura. Non era la vetrina a
+          essere invisibile: era la scena a spegnersi quando la
+          vetrina entrava.
+
+          Adesso la lampada sta a un'unità e un quarto, in mezzo al
+          fascio, dove la superficie più vicina è a più di
+          mezz'unità; l'intensità è un terzo; e il decadimento è
+          lineare invece che quadratico, così anche avvicinandosi
+          non può più esplodere. Il fascio si illumina uguale: era
+          già l'alone additivo a fare quasi tutto il lavoro. */}
+      <pointLight ref={lampada} position={[0, 1.25, 0]} color={LUCE}
+        distance={7} decay={1} intensity={6} />
       {/* l'alone sul cuscino: un disco piatto che finge il punto
           da cui la luce esce */}
       <mesh ref={alone} position={[0, 0.24, 0]} rotation={[-Math.PI / 2, 0, 0]} material={matAlone}>
