@@ -108,6 +108,30 @@ function Sincronia({ composta }) {
        misura dell'elemento sulla pagina */
     const telaSbagliata = Math.abs(tela.clientWidth - w) > 1 || Math.abs(tela.clientHeight - h) > 1
 
+    /* ── quanti pixel veri disegnare ────────────────────────────
+       La misura dell'elemento la garantisce il CSS; qui si decide
+       la risoluzione, e serve un tetto.
+
+       A zoom basso la finestra misura migliaia di pixel CSS: al
+       25% erano 7620 per 3780, che a densità 1 fanno ventotto
+       milioni di pixel — per ogni buffer, e il bagliore ne usa
+       diversi. È il modo più rapido per esaurire la memoria della
+       scheda video e ritrovarsi con una scena che sparisce senza
+       un errore, cioè di nuovo a cercare al buio.
+
+       Cinque milioni è il tetto: sopra i 2560 per 1440 nativi non
+       si guadagna niente di visibile e si paga tutto. */
+    const MAX_PIXEL = 5.0e6
+    const base = Math.min(schermo.leggero ? 1.5 : 2,
+      Math.max(1, window.devicePixelRatio || 1))
+    const tetto = Math.sqrt(MAX_PIXEL / Math.max(1, w * h))
+    const densita = Math.max(0.35, Math.min(base, tetto))
+    if (Math.abs(gl.getPixelRatio() - densita) > 0.02) {
+      gl.setPixelRatio(densita)
+      gl.setSize(w, h, true)
+      if (composta.current && composta.current.setSize) composta.current.setSize(w, h)
+    }
+
     if (disegnoSbagliato || telaSbagliata) {
       /* true, non false: aggiorna ANCHE lo stile CSS della tela.
          È la differenza fra una correzione che ripara e una che

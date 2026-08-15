@@ -37,7 +37,48 @@ body {
   overflow-x: hidden;
 }
 
-canvas { display: block; touch-action: pan-y; }
+/* ─────────────────────────────────────────────
+   LA TELA
+
+   Queste tre righe sono la cura del difetto che ha tenuto la
+   vetrina invisibile per due giorni, e vale la pena scrivere
+   perché — perché non è ovvio e mi è costato caro.
+
+   Un elemento canvas NON si allarga da solo al genitore. Se
+   nessuno gli dà una misura in CSS, resta della sua misura di
+   fabbrica: trecento per centocinquanta pixel, in alto a
+   sinistra. Fin qui la misura gliela dava soltanto JavaScript,
+   perché react-three-fiber chiama gl.setSize() che scrive
+   width e height nello stile in linea.
+
+   Il punto è: se quella chiamata salta anche una volta sola —
+   un ridimensionamento mentre il componente si sta rimontando,
+   un cambio di zoom, un cambio di schermo — la tela resta della
+   misura di prima, o peggio torna a trecento per centocinquanta.
+   E non succede niente di visibile: nessun errore, nessun avviso.
+   Semplicemente c'è una parte di schermo dove il canvas non
+   arriva, e lì non si disegna niente.
+
+   Il committente lo ha visto subito e lo ha detto in modo
+   esatto: nella sezione 02 il lato destro era nero. Non era la
+   vetrina a essere spenta — era che lì la tela non c'era. Il suo
+   rapporto diceva finestra 7620 di larghezza e tela 1350: cinque
+   sesti di schermo senza tela. La vetrina è l'unica cosa piazzata
+   sul bordo destro, quindi è stata la prima a sparire.
+
+   Con !important la misura dell'elemento non dipende più da
+   nessuna chiamata JavaScript: è il CSS a garantirla, sempre.
+   JavaScript continua a decidere la RISOLUZIONE del disegno
+   (gli attributi width/height, cioè quanti pixel veri), ma se
+   sbaglia quella il risultato è un'immagine un po' morbida —
+   non una parte di sito che non esiste.
+   ───────────────────────────────────────────── */
+canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: pan-y;
+}
 ::selection { background: var(--ocra); color: var(--fondo); }
 
 /* ─────────────────────────────────────────────
