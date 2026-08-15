@@ -2,89 +2,63 @@ import { campoProspettico } from '../lib/nuvola'
 
 /* ═══════════════════════════════════════════════════════════════
    L'ELICA
-   Due filamenti di sfere grandi, tenuti insieme da bastoncini che
-   li attraversano. Attorno, altre sfere che non si legano a niente
-   e restano a fluttuare.
+   Due popolazioni, come nel logo del dottore:
 
-   Questa è la costruzione della versione che il committente
-   ricordava, e che avevo perso per strada. Nel frattempo l'avevo
-   rifatta con quaranta sfere grosse e seicentoventi granelli: i
-   granelli facevano due corde continue, che di lontano sembravano
-   una treccia. Sembrava un'altra cosa, e infatti lo era.
+     · i FRUTTI   pochi e grossi, appoggiati sui due filamenti
+     · i CHICCHI  tanti e minuscoli, e sono LORO a disegnare
 
-   La differenza non è di quantità. Un filamento di granelli è una
-   LINEA — la leggi come tratto, come disegno. Un filamento di sfere
-   grandi è una CATENA — la leggi come oggetti separati che si
-   toccano. E se sono oggetti separati, allora hanno un davanti e un
-   dietro: quella vicina copre quella lontana, ed è da lì che nasce
-   la profondità. Con i granelli non c'è niente da coprire.
+   I chicchi fanno due corde continue che si avvitano, e nove file
+   trasversali da una corda all'altra. I frutti stanno sopra, uno
+   ogni tanto, come le perle su un filo.
 
-   I bastoncini fanno il resto. Senza, le due catene sono due catene
-   e basta; con, diventano una struttura, e si capisce che le sfere
-   stanno lì perché qualcosa le tiene.
+   ── perché si torna qui ────────────────────────────────────────
+   Questa è la costruzione del 12 agosto, ed è quella che il
+   committente aveva approvato. Nel frattempo l'ho rifatta due
+   volte con le sfere grandi in catena, e tutte e due le volte è
+   stata respinta — la seconda con le parole "riproduzione di
+   scarsissima qualità della precedente". Erano giuste.
 
-   ── la revisione del 15 agosto ─────────────────────────────────
-   Tre difetti, che erano poi lo stesso difetto guardato da tre
-   lati: i bastoncini non toccavano le sfere, le catene erano
-   rade, e l'elica era tirata per il lungo.
+   Il punto che avevo mancato è nella sua prima frase: "le linee
+   che collegano le sfere sono diverse". Le LINEE. Nella versione
+   buona i collegamenti non erano oggetti — erano file di chicchi,
+   cioè tratti di matita. Sostituirli con otto cilindri ha
+   cambiato il disegno da "una cosa disegnata" a "una cosa
+   montata", e nessuna quantità di ritocchi ai cilindri poteva
+   rimediare, perché il difetto era la loro esistenza.
 
-   Il primo era il grave. I bastoncini si calcolavano dalla
-   formula dell'elica, le sfere dalla formula PIÙ uno scarto
-   casuale, e per giunta erano otto contro trentanove sfere per
-   filamento: non potevano che cadere nel vuoto. Adesso un
-   bastoncino non ha coordinate proprie — prende due sfere e va
-   dall'una all'altra.
-
-   Gli altri due sono numeri: più sfere per filamento (sessantasei
-   invece di trentanove, così si sovrappongono invece di
-   distanziarsi) e passo uguale al diametro (quattro e quattro,
-   invece di cinque e tre contro cinque e uno).
+   Un filamento di chicchi è una LINEA: la leggi come tratto. Un
+   filamento di sfere grandi è una CATENA: la leggi come oggetti
+   in fila. Il logo è disegnato, quindi vuole linee.
    ═══════════════════════════════════════════════════════════════ */
 
-const BASE = 190
+const BASE_FRUTTI = 40
+const BASE_CHICCHI = 620
 
-/* ── le proporzioni ───────────────────────────────────────────
-   Sono quelle della prima versione, e ci sono tornato per una
-   ragione precisa: il passo dell'elica dev'essere circa uguale al
-   suo diametro.
+/* Le proporzioni contano più di tutto il resto: con i frutti troppo
+   grossi, o troppi, i due filamenti si toccano e l'elica diventa una
+   colonna. Deve restare il vuoto in mezzo — è quello a farla leggere
+   come un'elica invece che come un grappolo.
 
-   Con due giri su dieci e sei di altezza il passo era cinque e
-   tre, contro un diametro di cinque e uno: l'elica veniva tirata
-   per il lungo, i due filamenti si incrociavano a un angolo troppo
-   aperto, e da lontano sembravano due onde parallele invece che
-   una cosa avvolta. È il difetto che il committente ha visto
-   subito e ha chiamato "non sembra un'elica di DNA".
+   E i chicchi devono essere fitti al punto da toccarsi: due filamenti
+   punteggiati sembrano due file di puntini, due filamenti continui
+   sembrano due corde che si avvitano. */
+const GIRI = 2.2
+const ALTEZZA = 8.2
+const RAGGIO = 1.78
+const PIOLI = 9
 
-   Adesso passo quattro, diametro quattro: rapporto uno. Ogni giro
-   si chiude visibilmente su sé stesso, e la figura si legge come
-   avvolta anche ferma e anche di profilo. */
-const GIRI = 2.3
-const ALTEZZA = 9.2
-const RAGGIO = 2.0
-
-/* Sfasati di poco più di mezzo giro, non di mezzo esatto.
-
-   A mezzo giro esatto i due filamenti sono diametralmente opposti,
-   i pioli passano tutti per il centro, e la figura è simmetrica in
-   un modo che il DNA non ha: sopra e sotto si somigliano troppo e
-   l'occhio non trova l'avvitamento.
-
-   A 0,62 di giro nascono i due solchi — uno largo e uno stretto,
-   come nel DNA vero. Costa un numero e cambia tutto: è il solco
-   asimmetrico a dire "questa cosa gira". */
-const SFASAMENTO = Math.PI * 0.62
-
-/* Quanti pioli si vogliono vedere, all'incirca. Il numero esatto
-   lo decide la spaziatura delle sfere, perché ogni piolo deve
-   partire e arrivare sul CENTRO di una sfera vera. */
-const PIOLI_VOLUTI = 14
+/* Due terzi di giro, non mezzo: è lo sfasamento che dà i due
+   solchi del DNA, uno largo e uno stretto. A mezzo giro esatto i
+   filamenti sono opposti e la figura diventa simmetrica in un modo
+   che il DNA non ha. */
+const SFASAMENTO = Math.PI * 0.66
 
 export function caso(i) {
   const s = Math.sin(i * 127.1 + 311.7) * 43758.5453
   return s - Math.floor(s)
 }
 
-function suElica(t, filo) {
+const suElica = (t, filo) => {
   const a = t * GIRI * Math.PI * 2 + (filo ? SFASAMENTO : 0)
   return [Math.cos(a) * RAGGIO, (t - 0.5) * ALTEZZA, Math.sin(a) * RAGGIO]
 }
@@ -93,153 +67,150 @@ function suElica(t, filo) {
  * @param {number} fattore 1 sul computer, meno sui telefoni.
  */
 export function costruisciElica(fattore = 1) {
-  const N = Math.max(72, Math.round(BASE * Math.sqrt(fattore)))
-  /* Trenta per cento non si lega a niente. Sono quelle che nel
-     fotogramma stanno fuori dalla struttura, alcune enormi in
-     primo piano, altre minuscole sul fondo: senza di loro l'elica
-     è un oggetto sospeso nel nulla, con loro è dentro qualcosa.
+  const nF = Math.max(18, Math.round(BASE_FRUTTI * Math.sqrt(fattore)))
+  const nC = Math.max(180, Math.round(BASE_CHICCHI * fattore))
+  const n = nF + nC
 
-     Trenta e non quarantadue: con quarantadue le catene restavano
-     di trentanove sfere l'una su trenta unità di percorso, cioè
-     una ogni ottantasei centesimi contro un diametro di settanta.
-     Sedici centesimi di buco fra una sfera e l'altra, moltiplicati
-     per settantotto sfere — ed è esattamente questo che il
-     committente ha chiamato "la figura è meno compatta".
+  /* Un solo elenco per tutte: prima i frutti, poi i chicchi. La
+     scheda grafica disegna un oggetto solo, e il resto del codice
+     non deve sapere che ci sono due popolazioni — gli basta
+     `grande` per scegliere la tavolozza. */
+  const elica = new Float32Array(n * 3)
+  const misura = new Float32Array(n)
+  const nascita = new Float32Array(n)
+  const ritardo = new Float32Array(n)
+  const grande = new Uint8Array(n)
 
-     Con trenta le catene tornano a sessantasei sfere l'una, una
-     ogni quarantasei centesimi: si sovrappongono di un quarto, e
-     il filamento torna a essere una cosa sola invece di una fila
-     di cose. */
-  const LIBERE = Math.round(N * 0.30)
-  const SU_FILO = N - LIBERE
-  const perFilo = Math.floor(SU_FILO / 2)
+  /* ── i frutti sui filamenti ─────────────────────────────────── */
+  const LIBERI_F = Math.round(nF * 0.3)
+  const attaccati = nF - LIBERI_F
+  const fPerFilo = Math.ceil(attaccati / 2)
+  for (let i = 0; i < attaccati; i++) {
+    const filo = i % 2
+    const j = Math.floor(i / 2)
+    const t = (j + 0.5) / fPerFilo
+    const [x, y, z] = suElica(t, filo)
+    /* un filo fuori asse: i frutti non sono infilzati su un tubo */
+    elica[i * 3] = x * (1 + (caso(i * 2.3 + 5) - 0.5) * 0.16)
+    elica[i * 3 + 1] = y + (caso(i * 4.1 + 6) - 0.5) * 0.22
+    elica[i * 3 + 2] = z * (1 + (caso(i * 6.7 + 7) - 0.5) * 0.16)
+    ritardo[i] = Math.abs(t - 0.5) * 2 * 0.16
+  }
+  /* quelli che restano a fluttuare, vicini ma staccati */
+  for (let i = attaccati; i < nF; i++) {
+    const k = i - attaccati
+    const a = caso(k * 7.3 + 21) * Math.PI * 2
+    const r = 2.4 + caso(k * 3.9 + 22) * 2.6
+    elica[i * 3] = Math.cos(a) * r
+    elica[i * 3 + 1] = (caso(k * 5.1 + 23) - 0.5) * ALTEZZA * 1.15
+    elica[i * 3 + 2] = Math.sin(a) * r * 0.7
+    ritardo[i] = 0.18 + caso(k * 9.3 + 24) * 0.14
+  }
+  for (let i = 0; i < nF; i++) {
+    grande[i] = 1
+    /* la misura è già quella finale: 0,18–0,28 di raggio */
+    misura[i] = 0.176 + caso(i * 8.1 + 61) * 0.104
+    /* I frutti nascono per primi. Sono pochi e grossi, e quattro
+       sfere grandi in mezzo al nero reggono uno schermo — quattro
+       granelli no. */
+    nascita[i] = caso(i * 3.7 + 91) * 0.55
+  }
 
-  /* NASCITA — quando compare ognuna, da 0 a 1.
-     L'esponente sotto l'uno spinge quasi tutte verso la fine: con
-     le nascite distribuite in modo uniforme, al primo fotogramma
-     ce n'erano già una quarantina e il vuoto non c'era. Con 0,62
-     ce ne sono dieci, e il resto arriva piano. */
-  const elica = new Float32Array(N * 3)
-  const misura = new Float32Array(N)
-  const nascita = new Float32Array(N)
-  const ritardo = new Float32Array(N)
-
+  /* ── i chicchi: le corde e i pioli ──────────────────────────── */
+  const LIBERI_C = Math.round(nC * 0.065)
+  const legati = nC - LIBERI_C
+  const suiFili = Math.round(legati * 0.60)
+  const cPerFilo = Math.floor(suiFili / 2)
   let k = 0
+  const metti = (x, y, z) => {
+    const i = nF + k
+    elica[i * 3] = x; elica[i * 3 + 1] = y; elica[i * 3 + 2] = z
+    k++
+    return i
+  }
 
-  /* ── i due filamenti ──────────────────────────────────────────
-     Le sfere del filamento 0 stanno agli indici 0…perFilo-1, quelle
-     del filamento 1 subito dopo. Serve saperlo: i pioli, più sotto,
-     vanno a prendere le posizioni QUI DENTRO — non le ricalcolano.
-     È tutta la differenza fra un piolo che parte da una sfera e uno
-     che parte da dove la sfera dovrebbe essere. */
+  /* le due corde. Con cento e passa chicchi per filamento la
+     distanza fra l'uno e l'altro è meno del loro diametro: si
+     sovrappongono appena, ed è esattamente quello che serve
+     perché si legga un tratto continuo e non una fila di punti. */
   for (let filo = 0; filo < 2; filo++) {
-    for (let j = 0; j < perFilo; j++) {
-      const t = (j + 0.5) / perFilo
+    for (let j = 0; j < cPerFilo; j++) {
+      const t = (j + 0.5) / cPerFilo
       const [x, y, z] = suElica(t, filo)
-      /* Fuori asse di poco: infilzate su un tubo perfetto
-         sembrerebbero una collana di perle da mercatino.
-
-         Otto centesimi e non quattordici. Lo scarto lo pagano i
-         pioli: sono loro a doversi appoggiare sui centri, e con
-         quattordici centesimi in tre direzioni due sfere affacciate
-         potevano trovarsi sfalsate di quasi mezza sfera — e il
-         piolo, pur partendo da un centro vero, si vedeva entrare
-         storto. */
-      const sp = 0.08
-      elica[k * 3] = x + (caso(k * 2.3 + 5) - 0.5) * sp
-      elica[k * 3 + 1] = y + (caso(k * 4.1 + 6) - 0.5) * sp * 1.6
-      elica[k * 3 + 2] = z + (caso(k * 6.7 + 7) - 0.5) * sp
-
-      /* Le misure sulle catene variano parecchio ma non troppo:
-         devono toccarsi. Con lo scarto pieno una piccola in mezzo
-         a due grandi lascia un buco e la catena si spezza. */
-      misura[k] = 0.24 + caso(k * 8.1 + 61) * 0.17
-
-      /* Il ritardo del raduno: le sfere al centro dell'elica si
-         mettono a posto per prime, e la struttura cresce verso
-         le estremità. È un dettaglio che si nota solo se manca —
-         con i ritardi a caso sembra che si radunino alla rinfusa,
-         con questo sembra che si costruisca. */
-      ritardo[k] = Math.abs(t - 0.5) * 2 * 0.26
-      nascita[k] = Math.pow(caso(k * 3.7 + 91), 0.62)
-      k++
+      const s = 0.085
+      const i = metti(
+        x + (caso(k * 1.3 + 31) - 0.5) * s,
+        y + (caso(k * 2.7 + 32) - 0.5) * s,
+        z + (caso(k * 4.1 + 33) - 0.5) * s
+      )
+      ritardo[i] = Math.abs(t - 0.5) * 2 * 0.20
     }
   }
 
-  /* ── quelle che restano fuori ── */
-  for (let j = k; j < N; j++) {
-    const a = caso(j * 7.3 + 21) * Math.PI * 2
-    const r = RAGGIO * (1.15 + caso(j * 3.9 + 22) * 1.5)
-    elica[j * 3] = Math.cos(a) * r
-    elica[j * 3 + 1] = (caso(j * 5.1 + 23) - 0.5) * ALTEZZA * 1.35
-    elica[j * 3 + 2] = Math.sin(a) * r * 0.85
-    /* Qui invece lo scarto è pieno: il quadrato tiene basse quasi
-       tutte e ne lascia due o tre grosse. Sono quelle che nel
-       fotogramma entrano da un bordo e occupano un quarto di
-       schermo — servono a dire quanto è vicino il primo piano. */
-    const g = caso(j * 8.1 + 62)
-    misura[j] = 0.05 + g * g * 0.42
-    ritardo[j] = 0.26 + caso(j * 9.3 + 24) * 0.22
-    nascita[j] = Math.pow(caso(j * 3.7 + 91), 0.62)
+  /* I pioli, e sono la risposta a "le linee non sono nemmeno
+     collegate sfera-sfera, alcune vanno nel vuoto".
+
+     Un piolo non è un oggetto teso fra due punti: è una fila di
+     chicchi interpolati fra un punto dell'elica e l'altro, con
+     gli stessi chicchi delle corde. Parte da dentro una corda e
+     arriva dentro l'altra, perché il primo e l'ultimo cadono
+     esattamente sopra la corda. Non c'è nessun modo in cui possa
+     finire nel vuoto: è fatto della corda stessa. */
+  const suiPioli = legati - k
+  const perPiolo = Math.ceil(suiPioli / PIOLI)
+  for (let j = 0; j < suiPioli; j++) {
+    const nodo = Math.floor((j / suiPioli) * PIOLI)
+    const t = (nodo + 0.5) / PIOLI
+    const A = suElica(t, 0), B = suElica(t, 1)
+    const u = (j % perPiolo + 0.5) / perPiolo
+    const i = metti(
+      A[0] + (B[0] - A[0]) * u,
+      A[1] + (B[1] - A[1]) * u + (caso(j * 9.4 + 34) - 0.5) * 0.07,
+      A[2] + (B[2] - A[2]) * u
+    )
+    /* i pioli arrivano dopo le corde: prima le due spirali, poi
+       quello che le tiene insieme */
+    ritardo[i] = 0.22 + Math.abs(t - 0.5) * 2 * 0.14
   }
 
-  /* ── i pioli ─────────────────────────────────────────────────
-     Qui stava il difetto che si vedeva più di tutti.
-
-     Prima i pioli si calcolavano da capo con suElica(): partivano
-     dal punto MATEMATICO dell'elica, mentre le sfere stavano al
-     punto matematico più uno scarto casuale, e per giunta erano
-     otto contro trentanove sfere per filamento, cioè cadevano fra
-     una sfera e l'altra quasi sempre. Il risultato è quello che il
-     committente ha descritto senza mezzi termini: "le linee non
-     sono nemmeno collegate sfera-sfera, alcune vanno nel vuoto".
-     Aveva ragione, e non era un'impressione: erano proprio nel
-     vuoto, per costruzione.
-
-     Adesso un piolo non ha coordinate proprie. Prende la sfera j
-     del filamento 0 e la sfera j del filamento 1 dall'array che
-     abbiamo appena riempito, e va dall'una all'altra. Qualunque
-     scarto casuale abbiano le sfere, il piolo ci finisce dentro:
-     non può andare nel vuoto perché non sa dove sia il vuoto —
-     conosce solo due centri di sfera.
-
-     E siccome le due sfere di una coppia stanno alla stessa altezza
-     (i filamenti sono sfasati in giro, non in quota), i pioli
-     escono orizzontali: la scala a pioli del DNA, non una rete. */
-  const passo = Math.max(2, Math.round(perFilo / PIOLI_VOLUTI))
-  const nPioli = Math.floor((perFilo - 1) / passo) + 1
-  const pA = new Float32Array(nPioli * 3)
-  const pB = new Float32Array(nPioli * 3)
-  const pRitardo = new Float32Array(nPioli)
-  for (let i = 0; i < nPioli; i++) {
-    const j = i * passo
-    const a = j                 // sfera j del filamento 0
-    const b = perFilo + j       // la sua gemella sul filamento 1
-    pA[i * 3] = elica[a * 3]; pA[i * 3 + 1] = elica[a * 3 + 1]; pA[i * 3 + 2] = elica[a * 3 + 2]
-    pB[i * 3] = elica[b * 3]; pB[i * 3 + 1] = elica[b * 3 + 1]; pB[i * 3 + 2] = elica[b * 3 + 2]
-    /* dopo le sfere, e dal centro verso le estremità come loro */
-    const t = (j + 0.5) / perFilo
-    pRitardo[i] = 0.34 + Math.abs(t - 0.5) * 2 * 0.30
+  /* i chicchi che non si legano a niente e restano a fluttuare */
+  for (let j = k; j < nC; j++) {
+    const i = nF + j
+    const a = caso(j * 7.7 + 51) * Math.PI * 2
+    const r = 2.2 + caso(j * 3.3 + 52) * 3.4
+    elica[i * 3] = Math.cos(a) * r
+    elica[i * 3 + 1] = (caso(j * 5.9 + 53) - 0.5) * ALTEZZA * 1.3
+    elica[i * 3 + 2] = Math.sin(a) * r * 0.7
+    ritardo[i] = 0.20 + caso(j * 9.1 + 54) * 0.16
   }
 
-  /* Il campo sparso di partenza: costruito nel cono della
-     telecamera, così le misure apparenti nascono dalla distanza. */
-  const caos = campoProspettico(N, 11, 18, 8.0, 32, 1.16)
+  for (let j = 0; j < nC; j++) {
+    const i = nF + j
+    misura[i] = 0.068 + caso(j * 9.7 + 62) * 0.052
+    /* I chicchi tardi, e con una curva: sono seicentoventi, e se
+       entrano in fila indiana riempiono lo schermo in un attimo.
+       L'esponente li accumula verso la fine. */
+    nascita[i] = 0.10 + Math.pow(caso(j * 5.3 + 92), 0.38) * 0.90
+  }
+
+  /* ── il campo sparso di partenza ──────────────────────────────
+     I frutti possono venire vicini — uno a otto unità e mezzo
+     riempie mezzo schermo, ed è l'accento in primo piano. I
+     chicchi cominciano più lontano: sono già piccoli di loro, e
+     uno grosso davanti si legge come un frutto sbagliato. */
+  const caos = new Float32Array(n * 3)
+  caos.set(campoProspettico(nF, 11, 18, 8.5, 32, 1.16), 0)
+  caos.set(campoProspettico(nC, 41, 18, 12.0, 36, 1.16), nF * 3)
 
   /* ── il fondale ───────────────────────────────────────────────
      Dove finiscono le sfere quando l'elica si è dissolta, e dove
-     restano per tutto il resto del sito.
+     restano per tutto il resto del sito. Stesso campo prospettico,
+     con la fascia centrale dello schermo vuota al quarantaquattro
+     per cento: lì ci vanno i testi, e una sfera dietro una parola
+     resta un disturbo anche a fondo scala. */
+  const fondo = new Float32Array(n * 3)
+  fondo.set(campoProspettico(nF, 305, 18, 13.0, 40, 1.24, 0.44), 0)
+  fondo.set(campoProspettico(nC, 407, 18, 15.0, 44, 1.24, 0.44), nF * 3)
 
-     È lo stesso campo prospettico del caos iniziale, con due
-     differenze. La fascia centrale dello schermo è vuota al
-     quarantaquattro per cento — lì ci vanno i testi, e una sfera
-     dietro una parola resta un disturbo anche a fondo scala. E le
-     distanze partono da più lontano, così le poche che arrivano in
-     primo piano restano poche e stanno negli angoli.
-
-     È l'unico modo onesto per avere insieme le due cose che ha
-     chiesto: profondità vera e testo che si legge. */
-  const fondo = campoProspettico(N, 305, 18, 11.0, 40, 1.24, 0.44)
-
-  return { n: N, nPioli, caos, fondo, elica, misura, nascita, ritardo, pA, pB, pRitardo }
+  return { n, nF, caos, fondo, elica, misura, nascita, ritardo, grande }
 }

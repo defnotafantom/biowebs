@@ -88,13 +88,35 @@ export default function Vetrina() {
      Adesso è pietra chiara. Una colonna da museo non è nera: è
      travertino, e sta lì apposta perché la si veda anche quando
      sopra non c'è niente. */
+  /* ── perché adesso sono EMISSIVE ────────────────────────────
+     Il committente ha detto due volte che la vetrina non si vede,
+     e la seconda volta con precisione: "niente, buio totale". Ho
+     rifatto il conto della luce che le arriva, ed è un conto che
+     perde a ogni passaggio.
+
+     Il verde-pietra #6E7B6A in luce lineare vale 0,16. Ci arriva
+     l'ambiente (0,48 diviso pi greco = 0,15) più la direzionale
+     (2,3 per il coseno, diviso pi greco, cioè circa 0,5 sul lato
+     illuminato). Fa 0,10 in uscita. Poi la nebbia si prende
+     l'undici per cento, e la vignettatura — che a tre quarti di
+     schermo, dove la vetrina sta, morde forte — quasi la metà.
+     Resta un grigio che sul verde quasi nero del fondo non stacca.
+
+     Nessuna delle tre cose si può alzare senza rovinare le sfere,
+     che sono tarate su quelle stesse luci. Quindi la vetrina
+     smette di dipenderne: una componente emissiva è luce che
+     l'oggetto ha per conto suo, e non la toglie né la nebbia né
+     la vignettatura. Una colonna da museo è illuminata comunque;
+     qui lo è da dentro, ed è l'unico modo perché lo sia sempre. */
   const matColonna = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#6E7B6A', roughness: 0.62, metalness: 0.02,
+    color: '#8C9A86', roughness: 0.62, metalness: 0.02,
+    emissive: new THREE.Color('#2E3B33'), emissiveIntensity: 1,
     clearcoat: 0.28, clearcoatRoughness: 0.5, envMapIntensity: 1.5,
   }), [])
 
   const matCuscino = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#8E3F1C', roughness: 0.92, metalness: 0,
+    color: '#B2521F', roughness: 0.92, metalness: 0,
+    emissive: new THREE.Color('#5A2410'), emissiveIntensity: 1,
     sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#FF9A4E'),
     envMapIntensity: 1.1,
   }), [])
@@ -268,7 +290,15 @@ export default function Vetrina() {
     /* sta a destra come tutto il resto della scena, e in verticale
        sale nella fascia alta con il testo sotto */
     const kx = 1 - Math.exp(-dt * 3)
-    const bx = schermo.stretto ? 0 : 3.3
+    /* Due e sei, non tre e tre. La larghezza inquadrata dipende
+       dalla forma della finestra: su uno schermo alto e stretto —
+       un portatile a 1366 per 768 con le barre del browser — la
+       scena è larga meno di nove unità, e tre e tre finiscono al
+       settantacinque per cento dello schermo, cioè in pieno morso
+       della vignettatura. Due e sei tiene la colonna dentro il
+       fotogramma su qualunque proporzione, e resta comunque a
+       destra della colonna di testo, che non supera mai i 33 rem. */
+    const bx = schermo.stretto ? 0 : 2.6
     /* Mezz'unità più in basso di prima: con l'ologramma salito a
        un e cinquanta, il baricentro di quello che si guarda — la
        sagoma, non la colonna — cade adesso al centro esatto
@@ -276,7 +306,7 @@ export default function Vetrina() {
     const by = (schermo.stretto ? scena.alto - 1.1 : -1.95)
     gr.position.x += (bx - gr.position.x) * kx
     gr.position.y += (by - gr.position.y) * kx
-    const bs = (schermo.stretto ? 0.62 : 1) * mescola(0.86, 1, presenza)
+    const bs = (schermo.stretto ? 0.62 : 1.15) * mescola(0.86, 1, presenza)
     gr.scale.setScalar(gr.scale.x + (bs - gr.scale.x) * kx)
   })
 
@@ -298,10 +328,17 @@ export default function Vetrina() {
         <ringGeometry args={[0.74, 0.79, 48]} />
       </mesh>
 
-      {/* Una luce dedicata alla colonna. Le luci della scena sono
+      {/* Due luci dedicate alla colonna. Le luci della scena sono
           tarate sulle sfere, che stanno molto più avanti: qui
-          arrivava un terzo di niente e la pietra restava grigia. */}
-      <pointLight position={[-2.2, 2.4, 3.2]} color="#FFE3BC" distance={12} intensity={26} />
+          arrivava un terzo di niente e la pietra restava grigia.
+
+          La seconda sta DIETRO e in basso, e serve al contorno: è
+          il filo di luce lungo il bordo che stacca una forma scura
+          da un fondo scuro. Illuminare di più il davanti non
+          bastava — una colonna piatta e chiara su fondo nero resta
+          una macchia; è il bordo acceso a dirti che è un solido. */}
+      <pointLight position={[-2.2, 2.4, 3.2]} color="#FFE3BC" distance={12} intensity={38} />
+      <pointLight position={[1.6, -1.4, -2.6]} color="#FFB067" distance={9} intensity={26} />
 
       {/* ── il cuscino ── */}
       <mesh position={[0, 0.05, 0]} material={matCuscino}>
