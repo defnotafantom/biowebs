@@ -11,6 +11,7 @@ import { schermo, scena, quantita } from '../lib/schermo'
    spinner senza un errore in console e con una richiesta 503 che si
    vedeva solo guardando la rete. */
 import { costruisciElica, caso } from './geometria-elica'
+import { ancora } from '../lib/inquadratura'
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -492,10 +493,22 @@ export default function ElicaScena({ mouse }) {
        torna a zero: da fondale devono coprire tutto il fotogramma,
        che è il motivo per cui il campo del fondale ha la fascia
        centrale vuota invece di stare tutto da una parte. */
-    const bx2 = schermo.stretto ? 0 : 2.7 * r
+    /* In frazioni di schermo, non in unità di mondo.
 
-    /* Non si muove più: resta dove l'apertura l'ha lasciata. */
-    const by = scena.alto
+       Era `2.7 * r`. Due e sette unità cadono al 68% dello schermo
+       su un monitor panoramico e al 78% su una finestra quadrata:
+       la composizione cambiava da computer a computer senza che
+       nessuno l'avesse deciso. Adesso si dice dove si deve VEDERE
+       — al centro quando sono sparse, al 68% quando sono radunate
+       — e vale su qualunque schermo. */
+    const fx = schermo.stretto ? 0.5 : mescola(0.5, 0.68, r)
+    const bx2 = ancora(camera, fx, 0.5).x
+
+    /* Non si muove più in verticale: resta dove l'apertura l'ha
+       lasciata. In verticale la fascia alta è della scena. */
+    const by = schermo.stretto
+      ? ancora(camera, 0.5, 0.30).y
+      : 0
     const bs = schermo.stretto ? mescola(1, 0.40, r) : 1
 
     gr.position.x += (bx2 - gr.position.x) * kx

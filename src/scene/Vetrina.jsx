@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { scroll, stato, clamp, morbida, mescola } from '../lib/scroll'
 import { schermo, scena } from '../lib/schermo'
 import { presenzaScena } from '../lib/capitoli'
+import { ancoraDentro, misuraSchermo } from '../lib/inquadratura'
 import { STRUMENTI_3D, ORDINE_3D } from './strumenti3d'
 
 /* ═══════════════════════════════════════════════════════════════
@@ -82,52 +83,26 @@ export default function Vetrina() {
   /* i materiali si costruiscono una volta sola: crearli dentro il
      ciclo di disegno vorrebbe dire ricompilare uno shader per
      fotogramma, che è il modo più veloce per fare inginocchiare
-     una scheda grafica */
-  /* Il verde scurissimo di prima era un errore che si spiega da
-     solo: colonna quasi nera su fondo quasi nero, in una scena
-     dove l'unica luce forte è quella che deve uscire dal cuscino.
-     A cursore fermo la vetrina non si vedeva proprio — non era
-     "poco visibile", era invisibile, e infatti il committente ha
-     detto che non c'era niente.
+     una scheda grafica.
 
-     Adesso è pietra chiara. Una colonna da museo non è nera: è
-     travertino, e sta lì apposta perché la si veda anche quando
-     sopra non c'è niente. */
-  /* ── perché adesso sono EMISSIVE ────────────────────────────
-     Il committente ha detto due volte che la vetrina non si vede,
-     e la seconda volta con precisione: "niente, buio totale". Ho
-     rifatto il conto della luce che le arriva, ed è un conto che
-     perde a ogni passaggio.
-
-     Il verde-pietra #6E7B6A in luce lineare vale 0,16. Ci arriva
-     l'ambiente (0,48 diviso pi greco = 0,15) più la direzionale
-     (2,3 per il coseno, diviso pi greco, cioè circa 0,5 sul lato
-     illuminato). Fa 0,10 in uscita. Poi la nebbia si prende
-     l'undici per cento, e la vignettatura — che a tre quarti di
-     schermo, dove la vetrina sta, morde forte — quasi la metà.
-     Resta un grigio che sul verde quasi nero del fondo non stacca.
-
-     Nessuna delle tre cose si può alzare senza rovinare le sfere,
-     che sono tarate su quelle stesse luci. Quindi la vetrina
-     smette di dipenderne: una componente emissiva è luce che
-     l'oggetto ha per conto suo, e non la toglie né la nebbia né
-     la vignettatura. Una colonna da museo è illuminata comunque;
-     qui lo è da dentro, ed è l'unico modo perché lo sia sempre. */
+     NOTA — questi valori sono tornati agli originali. Nel corso di
+     una giornata li avevo schiariti e resi emissivi per rimediare
+     a una vetrina che "non si vedeva". Non era un problema di
+     luce: la vetrina finiva fuori inquadratura perché piazzata in
+     coordinate assolute. Tarare la luce per curare una posizione
+     sbagliata vuol dire portarsi dietro per sempre una colonna
+     troppo chiara. */
   const matColonna = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#8C9A86', roughness: 0.62, metalness: 0.02,
-    emissive: new THREE.Color('#2E3B33'), emissiveIntensity: 1,
+    color: '#6E7B6A', roughness: 0.62, metalness: 0.02,
     clearcoat: 0.28, clearcoatRoughness: 0.5, envMapIntensity: 1.5,
   }), [])
 
   const matCuscino = useMemo(() => new THREE.MeshPhysicalMaterial({
-    color: '#B2521F', roughness: 0.92, metalness: 0,
-    emissive: new THREE.Color('#5A2410'), emissiveIntensity: 1,
+    color: '#8E3F1C', roughness: 0.92, metalness: 0,
     sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#FF9A4E'),
     envMapIntensity: 1.1,
   }), [])
 
-  /* un filo di luce sul bordo del collarino: è il dettaglio che
-     stacca la colonna dal fondo senza doverla illuminare tutta */
   const matFilo0 = useMemo(() => new THREE.MeshBasicMaterial({
     color: '#FFC177', transparent: true, opacity: 0.55,
   }), [])
@@ -348,30 +323,49 @@ export default function Vetrina() {
          lontana dalle superfici questi numeri arrivano al massimo a
          una ventina di unità di irradianza: dentro il campo del
          Bloom, non oltre. */
-      lampada.current.intensity = (6 + 9 * v) * presenza
+      lampada.current.intensity = (16 + 26 * v) * presenza
     }
 
-    /* ── l'insieme ── */
-    /* sta a destra come tutto il resto della scena, e in verticale
-       sale nella fascia alta con il testo sotto */
+    /* ── l'insieme, in frazioni di schermo ──────────────────────
+       Qui non si dice più DOVE STA nel mondo, si dice DOVE SI VEDE
+       sullo schermo, e la conversione la fa la telecamera vera.
+
+       Prima era `bx = 2.6`. Due e sei unità cadono al 68% dello
+       schermo su un monitor panoramico e all'82% su una finestra
+       quadrata: la stessa riga di codice dava composizioni diverse
+       su ogni computer, e su qualcuno la colonna usciva. Adesso è
+       il 78% e basta, ovunque.
+
+       Il 78 non è a caso: il velo che copre il testo arriva al
+       massimo al 72% della larghezza, quindi la vetrina sta appena
+       oltre — vicina alla colonna di testo, ma fuori dalla parte
+       velata dove si perderebbe. */
     const kx = 1 - Math.exp(-dt * 3)
-    /* Due e sei, non tre e tre. La larghezza inquadrata dipende
-       dalla forma della finestra: su uno schermo alto e stretto —
-       un portatile a 1366 per 768 con le barre del browser — la
-       scena è larga meno di nove unità, e tre e tre finiscono al
-       settantacinque per cento dello schermo, cioè in pieno morso
-       della vignettatura. Due e sei tiene la colonna dentro il
-       fotogramma su qualunque proporzione, e resta comunque a
-       destra della colonna di testo, che non supera mai i 33 rem. */
-    const bx = schermo.stretto ? 0 : 2.6
-    /* Mezz'unità più in basso di prima: con l'ologramma salito a
-       un e cinquanta, il baricentro di quello che si guarda — la
-       sagoma, non la colonna — cade adesso al centro esatto
-       dell'inquadratura invece che nel terzo alto. */
-    const by = (schermo.stretto ? scena.alto - 1.1 : -1.95)
-    gr.position.x += (bx - gr.position.x) * kx
-    gr.position.y += (by - gr.position.y) * kx
-    const bs = (schermo.stretto ? 0.62 : 1.15) * mescola(0.86, 1, presenza)
+
+    /* La misura la decide lo schermo, non un numero fisso.
+       L'insieme colonna-fascio-ologramma è alto circa 5,4 unità
+       nel suo sistema, e deve occupare due terzi dell'altezza
+       inquadrata: su un telefono in verticale e su un monitor da
+       ventisette pollici la vetrina ha la stessa presenza. */
+    const ALTO = 5.4
+    const bs = misuraSchermo(camera, schermo.stretto ? 0.34 : 0.66) / ALTO
+      * mescola(0.86, 1, presenza)
+
+    /* mezza larghezza e mezza altezza vere, per la rete di
+       sicurezza: servono a garantire che ci stia dentro */
+    const p = ancoraDentro(
+      camera,
+      schermo.stretto ? 0.5 : 0.78,
+      schermo.stretto ? 0.26 : 0.52,
+      1.7 * bs, (ALTO / 2) * bs,
+    )
+
+    gr.position.x += (p.x - gr.position.x) * kx
+    /* Il gruppo ha l'origine al piano del cuscino, mentre il
+       baricentro di quello che si guarda sta più in alto: si
+       sottrae lo scarto, se no si ancora il piedistallo invece
+       della cosa da vedere. */
+    gr.position.y += ((p.y - 0.3 * bs) - gr.position.y) * kx
     gr.scale.setScalar(gr.scale.x + (bs - gr.scale.x) * kx)
   })
 
