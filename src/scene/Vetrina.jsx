@@ -249,6 +249,12 @@ export default function Vetrina() {
           schermoX: +((s.x * 0.5 + 0.5) * 100).toFixed(1) + '%',
           schermoY: +((-s.y * 0.5 + 0.5) * 100).toFixed(1) + '%',
           finestra: size.width + '×' + size.height,
+          /* Se questi due numeri non coincidono, una fetta di tela
+             non viene disegnata e tutto quello che ci finisce
+             dentro è nero. È il difetto che ha tenuto la vetrina
+             invisibile per due giorni, e da qui si vede subito. */
+          aspettoFinestra: +(size.width / size.height).toFixed(3),
+          aspettoTelecamera: +camera.aspect.toFixed(3),
         }
       }
     }
