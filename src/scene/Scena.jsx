@@ -97,7 +97,36 @@ function Atmosfera() {
   return <fog ref={nebbia} attach="fog" args={['#04120D', 7, 23]} />
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   GLI INTERRUTTORI DI PROVA
+   Si accendono dall'indirizzo, aggiungendo ?nobloom o ?nopost.
+
+   Ci sono perché per tre giri di seguito ho diagnosticato a naso
+   un difetto che non riuscivo a vedere — la scena che si spegne
+   nel capitolo 02 — e ogni volta ho sbagliato. Una scena 3D senza
+   un modo di isolarne i pezzi si può solo indovinare.
+
+     ?nobloom   toglie il bagliore, lascia la vignettatura
+     ?nopost    toglie tutta la post-produzione
+
+   Se con ?nobloom la vetrina compare, il colpevole è il bagliore:
+   un valore infinito in un pixel diventa NaN su tutta l'immagine
+   quando mipmapBlur fa le medie, e il fotogramma esce nero. Se
+   compare solo con ?nopost è la vignettatura. Se non compare con
+   nessuno dei due, il problema non è nella post-produzione e si
+   guarda window.bio.vetrina.
+
+   Non costano niente e restano: il prossimo che dovrà capire
+   perché una cosa non si vede parte da qui invece che da zero. */
+function prova(nome) {
+  if (typeof window === 'undefined') return false
+  return new URLSearchParams(window.location.search).has(nome)
+}
+
 export default function Scena({ mouse }) {
+  const senzaBloom = prova('nobloom')
+  const senzaPost = prova('nopost')
+
   return (
     <Canvas
       dpr={schermo.leggero ? [1, 1.5] : [1, 2]}
@@ -135,16 +164,18 @@ export default function Scena({ mouse }) {
 
       {/* il bagliore costa caro: sui dispositivi leggeri resta solo
           la vignettatura, che non pesa nulla */}
-      <EffectComposer disableNormalPass multisampling={0}>
-        {schermo.leggero
-          ? <Vignette offset={0.28} darkness={0.74} />
-          : (
-            <>
-              <Bloom intensity={0.78} luminanceThreshold={0.66} luminanceSmoothing={0.22} mipmapBlur radius={0.72} />
-              <Vignette offset={0.28} darkness={0.74} />
-            </>
-          )}
-      </EffectComposer>
+      {!senzaPost && (
+        <EffectComposer disableNormalPass multisampling={0}>
+          {(schermo.leggero || senzaBloom)
+            ? <Vignette offset={0.28} darkness={0.74} />
+            : (
+              <>
+                <Bloom intensity={0.78} luminanceThreshold={0.66} luminanceSmoothing={0.22} mipmapBlur radius={0.72} />
+                <Vignette offset={0.28} darkness={0.74} />
+              </>
+            )}
+        </EffectComposer>
+      )}
 
       <AdaptiveDpr pixelated={false} />
     </Canvas>

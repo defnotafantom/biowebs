@@ -63,6 +63,11 @@ export default function Vetrina() {
   const fascio = useRef()
   const alone = useRef()
   const lampada = useRef()
+  /* il corpo: i solidi. Si nasconde questo, non il gruppo, così le
+     luci restano contate anche quando la vetrina non c'è */
+  const corpo = useRef()
+  const luceA = useRef()
+  const luceB = useRef()
 
   /* Quale strumento è disegnato adesso. Questo deve passare da
      React — è l'unica cosa della scena che cambia la geometria, e
@@ -212,13 +217,56 @@ export default function Vetrina() {
     depthWrite: false, blending: THREE.AdditiveBlending,
   }), [])
 
-  useFrame(({ clock }, dt) => {
+  useFrame(({ clock, camera, size }, dt) => {
     const gr = gruppo.current
     if (!gr) return
+
+    /* ── il rapporto ───────────────────────────────────────────
+       Da console: window.bio.vetrina()
+
+       Dice dove sta la colonna, se è accesa, e — la cosa che
+       serve davvero — DOVE CADE SULLO SCHERMO in percentuale.
+       Perché tutte le mie ipotesi finora erano su "non si
+       illumina abbastanza" o "il bagliore la spegne", e nessuna
+       verificava la più stupida: che sia semplicemente fuori
+       dall'inquadratura, o dietro qualcosa. */
+    if (typeof window !== 'undefined' && window.bio && !window.bio.vetrina) {
+      window.bio.vetrina = () => {
+        const p = gr.getWorldPosition(new THREE.Vector3())
+        const s = p.clone().project(camera)
+        return {
+          capitolo: scroll.capitolo,
+          q: +scroll.q.toFixed(3),
+          presenza: +apparizione(scroll.capitolo, scroll.q).toFixed(3),
+          corpoVisibile: !!(corpo.current && corpo.current.visible),
+          ologrammaVisibile: !!(oggetto.current && oggetto.current.visible),
+          strumento: stato.strumento,
+          posizioneMondo: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)],
+          scala: +gr.scale.x.toFixed(3),
+          /* 0% = bordo sinistro/alto, 100% = destro/basso. Se sta
+             fuori da 0–100 la vetrina è fuori schermo e non c'è
+             nessun mistero da risolvere. */
+          schermoX: +((s.x * 0.5 + 0.5) * 100).toFixed(1) + '%',
+          schermoY: +((-s.y * 0.5 + 0.5) * 100).toFixed(1) + '%',
+          finestra: size.width + '×' + size.height,
+        }
+      }
+    }
     const cap = scroll.capitolo
     const presenza = apparizione(cap, scroll.q)
-    gr.visible = presenza > 0.01
-    if (!gr.visible) return
+    /* Il gruppo resta sempre nell'albero — è quello che tiene le
+       luci contate. Si nasconde il corpo, e le luci si abbassano a
+       zero: da fuori è identico, da dentro non cambia mai niente
+       che obblighi three a ricompilare uno shader. */
+    const acceso = presenza > 0.01
+    if (corpo.current) corpo.current.visible = acceso
+    if (luceA.current) luceA.current.intensity = 30 * presenza
+    if (luceB.current) luceB.current.intensity = 20 * presenza
+    if (!acceso) {
+      if (lampada.current) lampada.current.intensity = 0
+      if (oggetto.current) oggetto.current.visible = false
+      return
+    }
 
     const tempo = clock.elapsedTime
 
@@ -317,7 +365,39 @@ export default function Vetrina() {
   const pezzi = mostrato >= 0 ? STRUMENTI_3D[ORDINE_3D[mostrato]] : null
 
   return (
-    <group ref={gruppo} visible={false}>
+    /* Il gruppo NON ha più visible={false} nel JSX, e le luci non
+       si spengono più insieme ai solidi. Sono due difetti di
+       impianto, e tutti e due possono spegnere la scena intera.
+
+       Il primo: `visible` scritto come proprietà JSX è un valore
+       che React possiede. Noi lo cambiamo a mano nel ciclo di
+       disegno, ma a ogni ridisegno del componente — e ce n'è uno
+       ogni volta che cambi strumento, per via di setMostrato — la
+       proprietà del JSX può tornare a imporsi. Un oggetto che si
+       rispegne da solo quando tocchi un'altra cosa è esattamente
+       il tipo di difetto che non si riproduce quando lo cerchi.
+
+       Il secondo, più grave: in three un oggetto invisibile viene
+       saltato prima della raccolta delle luci, quindi rendere
+       visibile questo gruppo faceva passare le luci puntiformi
+       della scena da due a cinque. Cambiare il NUMERO di luci
+       obbliga ogni materiale a ricompilare il proprio shader, in
+       mezzo a un fotogramma, mentre la post-produzione sta già
+       leggendo il risultato. Adesso le luci ci sono sempre e a
+       cambiare è solo la loro intensità: il conto delle luci non
+       si muove mai, e non si ricompila niente.
+
+       Il gruppo resta sempre visibile e si nasconde solo il corpo
+       — i solidi — che è una cosa che non tocca gli shader. */
+    <group ref={gruppo}>
+      {/* Le luci della vetrina, sempre presenti, intensità zero
+          quando la vetrina non c'è. */}
+      <pointLight ref={luceA} position={[-2.2, 2.4, 3.2]} color="#FFE3BC" distance={12} intensity={0} />
+      <pointLight ref={luceB} position={[1.6, -1.4, -2.6]} color="#FFB067" distance={9} intensity={0} />
+      <pointLight ref={lampada} position={[0, 1.25, 0]} color={LUCE}
+        distance={7} decay={1} intensity={0} />
+
+      <group ref={corpo} visible={false}>
       {/* ── la colonna ── */}
       <mesh position={[0, -1.25, 0]} material={matColonna}>
         <cylinderGeometry args={[0.6, 0.74, 2.3, 40, 1]} />
@@ -332,18 +412,6 @@ export default function Vetrina() {
         <ringGeometry args={[0.74, 0.79, 48]} />
       </mesh>
 
-      {/* Due luci dedicate alla colonna. Le luci della scena sono
-          tarate sulle sfere, che stanno molto più avanti: qui
-          arrivava un terzo di niente e la pietra restava grigia.
-
-          La seconda sta DIETRO e in basso, e serve al contorno: è
-          il filo di luce lungo il bordo che stacca una forma scura
-          da un fondo scuro. Illuminare di più il davanti non
-          bastava — una colonna piatta e chiara su fondo nero resta
-          una macchia; è il bordo acceso a dirti che è un solido. */}
-      <pointLight position={[-2.2, 2.4, 3.2]} color="#FFE3BC" distance={12} intensity={38} />
-      <pointLight position={[1.6, -1.4, -2.6]} color="#FFB067" distance={9} intensity={26} />
-
       {/* ── il cuscino ── */}
       <mesh position={[0, 0.05, 0]} material={matCuscino}>
         <sphereGeometry args={[0.62, 32, 20]} />
@@ -352,35 +420,6 @@ export default function Vetrina() {
         <sphereGeometry args={[0.62, 32, 20]} />
       </mesh>
 
-      {/* ── la luce che sale dal cuscino ───────────────────────────
-          QUESTA RIGA MANDAVA NERO TUTTO LO SCHERMO.
-
-          Stava a y = 0,35. La cupola schiacciata del cuscino arriva
-          a 0,26: nove centesimi di distanza. Three, in luce
-          fisicamente corretta, attenua con 1/max(d², 0,01) — cioè
-          si ferma a moltiplicare per cento — e con l'intensità a
-          quarantadue quel pixel di stoffa valeva quattromiladuecento.
-
-          Il Bloom eleva al quadrato per calcolare la luminanza:
-          diciassette milioni, contro un buffer a mezza precisione
-          che arriva a 65504. Infinito. Poi mipmapBlur fa le medie
-          scendendo di mipmap, e un solo pixel infinito diventa NaN
-          su tutta la catena: il fotogramma intero esce nero.
-
-          È il motivo per cui "non si vedeva la vetrina" da computer
-          e si vedeva da telefono — sui dispositivi leggeri il Bloom
-          non c'è, resta solo la vignettatura. Non era la vetrina a
-          essere invisibile: era la scena a spegnersi quando la
-          vetrina entrava.
-
-          Adesso la lampada sta a un'unità e un quarto, in mezzo al
-          fascio, dove la superficie più vicina è a più di
-          mezz'unità; l'intensità è un terzo; e il decadimento è
-          lineare invece che quadratico, così anche avvicinandosi
-          non può più esplodere. Il fascio si illumina uguale: era
-          già l'alone additivo a fare quasi tutto il lavoro. */}
-      <pointLight ref={lampada} position={[0, 1.25, 0]} color={LUCE}
-        distance={7} decay={1} intensity={6} />
       {/* l'alone sul cuscino: un disco piatto che finge il punto
           da cui la luce esce */}
       <mesh ref={alone} position={[0, 0.24, 0]} rotation={[-Math.PI / 2, 0, 0]} material={matAlone}>
@@ -394,13 +433,14 @@ export default function Vetrina() {
       <mesh ref={fascio} position={[0, 1.95, 0]} geometry={geoFascio} material={matFascio} />
 
       {/* ── l'ologramma ── */}
-      <group ref={oggetto} visible={false}>
+      <group ref={oggetto}>
         {pezzi?.map((d, i) => (
           <group key={i}>
             <Pezzo d={d} mat={matOlo} />
             <Pezzo d={d} mat={matFilo} />
           </group>
         ))}
+      </group>
       </group>
     </group>
   )
