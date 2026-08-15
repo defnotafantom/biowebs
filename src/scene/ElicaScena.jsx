@@ -10,12 +10,12 @@ import { schermo, scena, quantita } from '../lib/schermo'
    finiva per risolvere al file sbagliato. La pagina restava sullo
    spinner senza un errore in console e con una richiesta 503 che si
    vedeva solo guardando la rete. */
-import { costruisciElica, caso, PIOLI } from './geometria-elica'
+import { costruisciElica, caso } from './geometria-elica'
 
 
 /* ═══════════════════════════════════════════════════════════════
    L'ELICA
-   Centotrentaquattro sfere e otto bastoncini.
+   Centonovanta sfere e quattordici bastoncini.
 
    Le sfere sono grandi e di misure molto diverse. Non è vezzo: è
    quello che fa la profondità. Sfere tutte uguali a distanze
@@ -93,27 +93,40 @@ function raduno(s, cap, q) {
   return 0
 }
 
-/* IL TAGLIO — quanto la struttura viene coperta dal basso.
+/* IL TAGLIO — quanto la struttura è già scomparsa dietro il bordo.
 
    Nel primo capitolo l'elica NON si muove. Prima la facevo salire
    fuori inquadratura, e il risultato era che si staccava dalla
    base e volava via: sembrava che l'oggetto se ne andasse, mentre
    quello che deve succedere è che il contenuto arrivi.
 
-   Adesso resta esattamente dov'era e viene tagliata da un piano
-   orizzontale che sale fino al bordo alto del blocco di testo. È
-   come se la sezione, pur essendo trasparente, la coprisse: netto,
-   dritto, e simmetrico rispetto alla colonna del testo. Quello che
-   sta sotto non si sfuma — non c'è. */
+   Resta dov'è, e sotto una certa riga dello schermo semplicemente
+   non c'è più. Il committente lo ha detto meglio di come lo avrei
+   detto io: il taglio non si deve VEDERE, deve sembrare che la
+   figura sia scomparsa dietro il bordo del box. Che è la stessa
+   cosa detta due volte solo se il taglio è fatto bene. */
 function taglio(cap, q) {
   if (cap !== 1) return 0
-  return morbida(fascia(q, 0.0, 0.34))
+  /* La corsa finisce esattamente dove comincia lo scioglimento
+     (0,52 del capitolo, vedi raduno()). Se finisse prima, restava
+     un tratto di capitolo con la figura già tutta sotto il bordo e
+     lo scioglimento non ancora partito: mezzo schermo vuoto, e un
+     vuoto che non significa niente. Così invece il momento in cui
+     sparisce dietro il bordo è lo stesso in cui comincia a
+     disfarsi, e le due cose si leggono come una sola. */
+  return morbida(fascia(q, 0.0, 0.52))
 }
 
-/* Dove cade il taglio, in frazione dell'altezza dello schermo dal
-   bordo alto. Il blocco di testo del capitolo 01 comincia più o
-   meno a un quinto dall'alto. */
-const ALTEZZA_TAGLIO = 0.21
+/* Da dove a dove viaggia la riga del taglio, in frazione
+   dell'altezza dello schermo dal bordo alto.
+
+   Parte a 1,18 — sotto il bordo basso, quindi non taglia niente —
+   e arriva a 0,17, che è dove comincia il blocco di testo del
+   capitolo 01. Non si ferma a metà: se si fermasse, resterebbe
+   sullo schermo mezza elica appoggiata su una riga, ed è
+   esattamente l'immagine che non vogliamo. */
+const TAGLIO_DA = 1.18
+const TAGLIO_A = 0.17
 
 /* Quanto dura la comparsa di una singola sfera. Da 0,11 a 0,26:
    più del doppio, perché comparire deve essere un viaggio e non
@@ -143,6 +156,36 @@ const _pos = new THREE.Vector3()
 const _rot = new THREE.Quaternion()
 const _sc = new THREE.Vector3()
 const _mat4 = new THREE.Matrix4()
+const _n = new THREE.Vector3()
+
+/* ── la riga del taglio, e perché non era una riga ──────────────
+   Il taglio si faceva con un piano orizzontale del mondo, y = k.
+   Sembra la cosa ovvia, e invece è la cosa sbagliata: un piano
+   orizzontale visto in prospettiva non si proietta su una riga
+   dritta dello schermo, si proietta su un ventaglio che va verso
+   l'orizzonte. Le sfere vicine venivano tagliate molto più in alto
+   di quelle lontane, e la stessa quota del mondo cadeva su otto
+   punti diversi dello schermo. Da lì "l'elica è tagliata male":
+   non era il posto del taglio a essere sbagliato, era la forma.
+
+   Un piano si proietta su una riga dritta solo se passa per il
+   centro ottico della telecamera. Quindi si costruisce lì: nello
+   spazio della telecamera, il piano che contiene l'origine e taglia
+   all'altezza voluta ha normale (0, 1, m·tanα), dove m è la quota
+   in coordinate normalizzate e alfa è mezzo angolo di campo. Lo si
+   ruota come la telecamera, lo si fa passare per la telecamera, ed
+   è fatto: una riga orizzontale perfetta, a qualunque profondità.
+
+   Ed è quella riga che serve, perché sopra ci va incollata la
+   fascia opaca del DOM. Se il taglio è un ventaglio non c'è nessuna
+   fascia che lo possa nascondere. */
+function orientaTaglio(piano, camera, frazione) {
+  const m = (0.5 - frazione) * 2
+  const tan = Math.tan((camera.fov / 2) * Math.PI / 180)
+  _n.set(0, 1, m * tan).normalize().applyQuaternion(camera.quaternion)
+  piano.normal.copy(_n)
+  piano.constant = -_n.dot(camera.position)
+}
 
 export default function ElicaScena({ mouse }) {
   const gruppo = useRef()
@@ -159,6 +202,15 @@ export default function ElicaScena({ mouse }) {
 
   const dati = useMemo(() => costruisciElica(quantita()), [])
   const n = dati.n
+  const nPioli = dati.nPioli
+
+  /* L'ultimo valore scritto nel CSS. Serve solo a non riscriverlo
+     sessanta volte al secondo con lo stesso numero: cambiare una
+     variabile CSS costa un ricalcolo di stile, e a taglio fermo
+     sarebbe un ricalcolo per niente. */
+  const rigaScritta = useRef(-1)
+  /* la fascia opaca del DOM, cercata una volta e tenuta da parte */
+  const fascia0 = useRef(null)
 
   /* carattere di ogni sfera: fase del galleggiamento e curva del
      viaggio. Il viaggio non è una retta: una retta sembra una
@@ -216,12 +268,12 @@ export default function ElicaScena({ mouse }) {
 
     const bb = barre.current
     if (bb) {
-      for (let i = 0; i < PIOLI; i++) bb.setColorAt(i, PAGLIA)
+      for (let i = 0; i < nPioli; i++) bb.setColorAt(i, PAGLIA)
       if (bb.instanceColor) bb.instanceColor.needsUpdate = true
     }
-  }, [n, base, piano])
+  }, [n, nPioli, base, piano])
 
-  useFrame(({ clock }, dt) => {
+  useFrame(({ clock, camera }, dt) => {
     const m = rete.current
     const gr = gruppo.current
     if (!m || !gr) return
@@ -302,7 +354,7 @@ export default function ElicaScena({ mouse }) {
     const bb = barre.current
     if (bb) {
       const { pA, pB, pRitardo } = dati
-      for (let i = 0; i < PIOLI; i++) {
+      for (let i = 0; i < nPioli; i++) {
         const cresce = morbida(clamp((r - pRitardo[i]) / 0.22))
         if (cresce <= 0.001) {
           _mat4.makeScale(0, 0, 0)
@@ -320,7 +372,13 @@ export default function ElicaScena({ mouse }) {
         const lungo = _dir.length()
         _dir.normalize()
         _rot.setFromUnitVectors(_su, _dir)
-        _sc.set(0.042, lungo * cresce, 0.042)
+        /* Sette centesimi e mezzo, non quattro. A quattro i pioli
+           erano fili: si vedevano solo in controluce, e un filo fra
+           due sfere non le TIENE, ci passa in mezzo. A sette e
+           mezzo contro un raggio medio di trentadue centesimi sono
+           bastoncini veri — entrano nella sfera e sembrano
+           infilati, che è il gesto che serve. */
+        _sc.set(0.075, lungo * cresce, 0.075)
         _mat4.compose(_pos, _rot, _sc)
         bb.setMatrixAt(i, _mat4)
       }
@@ -342,12 +400,52 @@ export default function ElicaScena({ mouse }) {
     gr.rotation.z = inclina.current.z
 
     /* ── il taglio ──────────────────────────────────────────────
-       Il piano sale fino al bordo alto del blocco di testo. La
-       quota si ricava dall'altezza inquadrata, non è un numero
-       fisso: cambiando la distanza della telecamera o la forma
-       dello schermo, il taglio resta dov'è rispetto al testo. */
-    const quota = (0.5 - ALTEZZA_TAGLIO) * scena.altezza
-    piano.constant = tg > 0.001 ? -mescola(-scena.altezza, quota, tg) : 1000
+       Due righe che devono cadere sullo stesso pixel: quella del
+       piano che taglia la scena, e quella della fascia opaca che
+       sta nel DOM. Il piano si costruisce dalla telecamera perché
+       venga dritto; la frazione la scrive nel CSS, e la fascia si
+       posiziona da sola. Se le due righe si scostassero anche di
+       due pixel si vedrebbe una fettina di sfera sopra il bordo, e
+       tutto il trucco cadrebbe. */
+    if (tg > 0.001) {
+      /* In verticale il testo non sta a sinistra ma sotto la fascia
+         della scena, che si prende il trenta per cento alto. Il
+         bordo del box è quello, non un quinto dall'alto. */
+      const fine = schermo.stretto ? 0.34 : TAGLIO_A
+      const riga = mescola(TAGLIO_DA, fine, tg)
+      orientaTaglio(piano, camera, riga)
+      const el = fascia0.current || (fascia0.current = document.querySelector('.bordo'))
+      if (el && Math.abs(riga - rigaScritta.current) > 0.0008) {
+        rigaScritta.current = riga
+        /* Le variabili si scrivono sull'elemento, non su :root.
+           Su :root sarebbero valide ovunque — comodo — ma ogni
+           scrittura invaliderebbe lo stile dell'intero documento
+           sessanta volte al secondo mentre si scorre. Qui invalida
+           una fascia vuota, e costa zero. */
+        const st = el.style
+        st.setProperty('--taglio', (riga * 100).toFixed(3) + '%')
+        /* la fascia entra prestissimo e poi resta: deve esserci
+           già prima che il piano incontri la prima sfera */
+        st.setProperty('--taglio-op', Math.min(1, tg * 5).toFixed(3))
+        /* Lo spigolo no. Il filo chiaro sul bordo alto compare solo
+           alla fine della corsa, con il cubo: se fosse acceso da
+           subito si vedrebbe una riga luminosa attraversare tutto
+           lo schermo dal basso verso l'alto, e una riga che
+           attraversa lo schermo è un effetto — mentre qui deve
+           essere il ciglio di un piano che era già lì. */
+        st.setProperty('--taglio-filo', (tg * tg * tg).toFixed(3))
+      }
+    } else {
+      /* mille unità sotto: non incontra niente, e il materiale non
+         ricompila perché l'elenco dei piani non cambia */
+      piano.normal.set(0, 1, 0)
+      piano.constant = 1000
+      if (rigaScritta.current !== -1) {
+        rigaScritta.current = -1
+        const el = fascia0.current || (fascia0.current = document.querySelector('.bordo'))
+        if (el) el.style.setProperty('--taglio-op', '0')
+      }
+    }
 
     const kx = 1 - Math.exp(-dt * 2)
 
@@ -378,9 +476,14 @@ export default function ElicaScena({ mouse }) {
       <instancedMesh ref={rete} args={[undefined, undefined, n]} frustumCulled={false}>
         {/* Sfere grandi: qui i poligoni contano. A quattordici
             spicchi il bordo si vedeva sfaccettato quando una
-            riempie mezzo schermo. Sono centotrentaquattro, non
-            seicentosessanta: il conto se lo può permettere. */}
-        <sphereGeometry args={[1, 28, 20]} />
+            riempie mezzo schermo.
+
+            Ventisei per diciotto e non ventotto per venti: le sfere
+            sono passate da centotrentaquattro a centonovanta per
+            rendere compatte le catene, e a parità di spicchi
+            sarebbero stati sessantamila triangoli in più. Così il
+            conto resta dov'era e il bordo è ancora tondo. */}
+        <sphereGeometry args={[1, 26, 18]} />
         {/* la velatura lucida sopra è quello che le fa sembrare
             frutta e non biglie di plastica */}
         <meshPhysicalMaterial
@@ -394,7 +497,7 @@ export default function ElicaScena({ mouse }) {
         />
       </instancedMesh>
 
-      <instancedMesh ref={barre} args={[undefined, undefined, PIOLI]} frustumCulled={false}>
+      <instancedMesh ref={barre} args={[undefined, undefined, nPioli]} frustumCulled={false}>
         {/* cilindro di raggio e altezza uno: la matrice lo allunga
             e lo orienta da una sfera all'altra */}
         <cylinderGeometry args={[1, 1, 1, 10, 1]} />

@@ -316,6 +316,46 @@ canvas { display: block; touch-action: pan-y; }
 }
 .velo.assente { opacity: 0; }
 
+/* ─────────────────────────────────────────────
+   il bordo del box — nasconde la riga del taglio
+
+   Sta fra la scena (z 0) e il velo (z 4). La quota arriva dalla
+   scena 3D: --taglio è la stessa frazione con cui è costruito il
+   piano che taglia, quindi le due righe coincidono per definizione
+   e non per taratura a occhio.
+
+   Il fondo è opaco per il primo terzo e poi sfuma: opaco serve
+   perché il taglio sia coperto davvero, sfumato serve perché sotto
+   ci sono le sfere del fondale e una fascia piena le mangerebbe.
+   ───────────────────────────────────────────── */
+.bordo {
+  position: fixed;
+  top: var(--taglio, 120%);
+  left: 0; right: 0; height: 62vh;
+  z-index: 3; pointer-events: none;
+  opacity: var(--taglio-op, 0);
+  background: linear-gradient(
+    180deg,
+    var(--fondo) 0%,
+    var(--fondo) 34%,
+    rgba(4, 18, 13, 0.72) 62%,
+    rgba(4, 18, 13, 0) 100%
+  );
+}
+/* lo spigolo. Un filo solo, e appena acceso: deve dire che c'è un
+   piano, non disegnare una riga sopra la pagina */
+.bordo::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
+  opacity: var(--taglio-filo, 0);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(232, 163, 58, 0.34) 18%,
+    rgba(232, 163, 58, 0.34) 82%,
+    transparent 100%
+  );
+}
+
 /* In verticale il testo non sta a sinistra ma sotto la fascia
    della scena, quindi il velo gira di novanta gradi. */
 @media (max-width: 900px) {

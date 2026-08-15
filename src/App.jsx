@@ -142,6 +142,24 @@ export default function App() {
           sfere devono poter prendere tutto lo schermo. */}
       <div className="velo" aria-hidden="true" />
 
+      {/* IL BORDO DEL BOX
+          Una fascia opaca che comincia esattamente sulla riga dove
+          la scena viene tagliata. La riga la scrive la scena stessa
+          nella variabile --taglio, fotogramma per fotogramma.
+
+          Serve a una cosa sola, ed è la cosa che il committente ha
+          chiesto: che il taglio non si veda. Una sfera tagliata da
+          un piano è una sfera vuota — si vede l'interno, e si legge
+          come un errore. Con la fascia sopra, la riga del taglio è
+          l'ultimo pixel visibile della scena e il primo pixel della
+          fascia: non c'è niente da vedere, e la figura sembra
+          essere scivolata dietro il bordo di qualcosa.
+
+          Il filo chiaro sul bordo alto è quel qualcosa. Senza, è
+          una sfumatura e basta; con, è un piano che ha uno spigolo,
+          e dietro uno spigolo le cose ci vanno. */}
+      <div className="bordo" aria-hidden="true" />
+
       {/* griglia di riferimento: quasi invisibile, ma è ciò che
           fa sembrare la pagina costruita invece che appoggiata */}
       <div className="reticolo" aria-hidden="true">

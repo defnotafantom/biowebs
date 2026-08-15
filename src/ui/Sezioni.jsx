@@ -148,10 +148,24 @@ function Strumenti() {
   const rif = useVisibilita(2)
   const tocco = useTocco()
   const s = sezioni.strumenti
-  /* -1 = nessuno strumento puntato: le particelle restano sparse.
-     Al tocco non esiste il passaggio del cursore, quindi lì si
-     parte dal primo. */
-  const [su, setSu] = useState(tocco ? 0 : -1)
+  /* Si parte SEMPRE dal primo, anche col cursore.
+
+     Prima da computer si partiva da -1, cioè da nessuno strumento
+     puntato, e la vetrina restava una colonna spenta con un filo di
+     luce sopra finché non passavi il mouse su una voce. Da telefono
+     invece si partiva da zero e l'ologramma c'era. È tutta qui la
+     differenza che il committente ha visto — "dal computer la
+     vetrina con l'ologramma non si vede, da telefono sì": non era
+     un problema di posizione né di schermo, era che su un capo si
+     mostrava qualcosa e sull'altro no.
+
+     E la scelta era sbagliata comunque. Una vetrina vuota che si
+     riempie solo se indovini di passarci sopra chiede all'utente di
+     scoprire un gesto per vedere il contenuto. Meglio mostrare
+     subito il primo strumento: il passaggio del cursore diventa
+     quello che dev'essere, cioè un modo per cambiare soggetto, non
+     per accendere la luce. */
+  const [su, setSu] = useState(0)
   /* La scena legge da stato.strumento, che vive fuori da React
      perché il ciclo 3D non può dipendere da un ridisegno. Va
      tenuto in pari qui, e non dentro i gestori: se lo scrivessi
@@ -159,7 +173,6 @@ function Strumenti() {
      al valore di partenza e la figura si comporrebbe da sola. */
   useEffect(() => { stato.strumento = su }, [su])
   const entra = (i) => setSu(i)
-  const esci = () => setSu(-1)
   const v = s.voci[su] || s.voci[0]
 
   return (
@@ -176,9 +189,13 @@ function Strumenti() {
             </div>
           </>
         ) : (
-          <ul className="strumenti entra" style={{ '--i': 3 }} onPointerLeave={esci}>
+          /* Niente onPointerLeave: uscendo col cursore l'ultimo
+             strumento guardato resta acceso. Spegnere all'uscita
+             vuol dire che per metà del tempo la vetrina è vuota, e
+             la vetrina vuota è il difetto che stiamo togliendo. */
+          <ul className="strumenti entra" style={{ '--i': 3 }}>
             {s.voci.map((x, i) => (
-              <li key={x.sigla} className={su === i ? 'acceso' : su === -1 ? '' : 'spento'}
+              <li key={x.sigla} className={su === i ? 'acceso' : 'spento'}
                 onPointerEnter={() => entra(i)} onFocus={() => entra(i)} tabIndex={0}>
                 <span className="riempi" aria-hidden="true" />
                 <span className="str-sigla">{x.sigla}</span>

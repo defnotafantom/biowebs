@@ -110,18 +110,32 @@ export default function Vetrina() {
      differenza: senza, i pezzi trasparenti si nascondono a vicenda
      a seconda dell'ordine in cui capita di disegnarli, e l'oggetto
      lampeggia mentre gira. */
+  /* Fusione normale, non additiva.
+
+     Additiva vuol dire che il colore dell'oggetto si SOMMA a quello
+     che ha dietro. Su fondo nero è perfetta ed è il motivo per cui
+     l'avevo scelta. Ma qui dietro c'è il fascio di luce, che è a
+     sua volta additivo: due additivi sovrapposti saturano, la
+     sagoma si scioglie dentro il fascio, e non si distingue più
+     l'oggetto dalla luce che lo dovrebbe proiettare. È
+     letteralmente la frase del committente — "l'ologramma non si
+     capisce bene, è attaccato al fascio di luce".
+
+     Con la fusione normale e mezza opacità la sagoma copre il
+     fascio invece di sommarcisi: si legge come una cosa DENTRO la
+     luce. Il bagliore lo mette il fil di ferro, che resta additivo
+     e da solo non satura mai. */
   const matOlo = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#FFB44E', emissive: new THREE.Color('#FF9A2E'), emissiveIntensity: 1.1,
+    color: '#FFC46A', emissive: new THREE.Color('#FF8A1E'), emissiveIntensity: 0.9,
     roughness: 0.3, metalness: 0.1,
-    transparent: true, opacity: 0.3, depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    transparent: true, opacity: 0.52, depthWrite: false,
   }), [])
 
   /* la seconda passata a fil di ferro: è quella che lo fa leggere
      come proiezione e non come oggetto di plastica arancione */
   const matFilo = useMemo(() => new THREE.MeshBasicMaterial({
-    color: '#FFE2B4', wireframe: true,
-    transparent: true, opacity: 0.42, depthWrite: false,
+    color: '#FFF0D2', wireframe: true,
+    transparent: true, opacity: 0.6, depthWrite: false,
     blending: THREE.AdditiveBlending,
   }), [])
 
@@ -130,13 +144,31 @@ export default function Vetrina() {
      e in un materiale semplice l'unico modo senza scrivere uno
      shader è dipingere i vertici — bianco in basso, nero in alto,
      e il colore per vertice fa da maschera. */
+  /* Il fascio è più alto e si spegne più in fretta di prima.
+
+     L'oggetto adesso sta in alto, dove la luce è quasi finita, e
+     non più appoggiato sulla bocca del fascio dove era più
+     luminosa. Nel museo è così: il faretto è in basso o dietro, e
+     la cosa che guardi sta nella parte di luce che non ti acceca.
+
+     L'esponente da 1,8 a 2,8 è quello che libera lo spazio: il
+     bagliore forte resta nel primo terzo — sopra il cuscino, dove
+     serve a dire "la luce esce da qui" — e nei due terzi alti
+     rimane un velo, che è dove l'ologramma può leggersi. */
   const geoFascio = useMemo(() => {
-    const g = new THREE.CylinderGeometry(0.95, 0.26, 2.7, 36, 12, true)
+    /* Un e ottantacinque in cima: il cono deve CONTENERE l'oggetto
+       alla quota in cui l'oggetto sta, se no si vede un ologramma
+       che sborda dalla luce che lo proietta — e un proiettore che
+       proietta fuori dal proprio fascio non si guarda, si nota.
+       Il bioimpedenziometro è il più largo dei cinque: due e otto
+       per due, cioè un e quindici di semilarghezza a scala 0,82.
+       A quella altezza il cono ne misura un e sedici. */
+    const g = new THREE.CylinderGeometry(1.85, 0.28, 3.4, 36, 14, true)
     const pos = g.attributes.position
     const col = new Float32Array(pos.count * 3)
     for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) / 2.7 + 0.5          // 0 in basso, 1 in alto
-      const f = Math.pow(1 - y, 1.8) * 0.9 + 0.05
+      const y = pos.getY(i) / 3.4 + 0.5          // 0 in basso, 1 in alto
+      const f = Math.pow(1 - y, 2.8) * 0.95 + 0.03
       col[i * 3] = f; col[i * 3 + 1] = f; col[i * 3 + 2] = f
     }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3))
@@ -197,11 +229,22 @@ export default function Vetrina() {
         /* gira piano su sé stesso e galleggia: fermo sembrerebbe
            una figura incollata sullo sfondo */
         og.rotation.y = tempo * 0.34
-        og.position.y = 0.34 + Math.sin(tempo * 0.9) * 0.045
+        /* Un'unità e mezza sopra il cuscino, non un terzo.
+
+           Prima l'oggetto era appoggiato sulla bocca del fascio: la
+           parte più stretta e più accesa, larga mezza unità contro
+           un oggetto largo quasi tre. Metà dell'oggetto era fuori
+           dalla luce e l'altra metà ci sguazzava dentro. Ecco
+           perché "è attaccato al fascio": lo era davvero.
+
+           A un e cinquanta galleggia nella parte alta e larga, dove
+           la luce è un velo, e fra la sua base e il cuscino c'è
+           un'unità di fascio pulito che si legge come proiezione. */
+        og.position.y = 1.50 + Math.sin(tempo * 0.9) * 0.05
         /* nasce dal basso: mentre compare è schiacciato e sale,
            come se la luce lo stesse costruendo dal piano */
         const m = morbida(v)
-        og.scale.set(m, m * m, m)
+        og.scale.set(m * 0.82, m * m * 0.82, m * 0.82)
       }
     }
 
@@ -211,7 +254,7 @@ export default function Vetrina() {
       fascio.current.scale.set(acceso, 1, acceso)
       /* il tremolio: un fascio perfettamente stabile sembra un
          solido, uno che respira sembra luce nell'aria */
-      fascio.current.material.opacity = (0.055 + 0.055 * v) * presenza
+      fascio.current.material.opacity = (0.085 + 0.075 * v) * presenza
         * (0.84 + Math.sin(tempo * 1.7) * 0.16)
     }
     if (alone.current) {
@@ -226,7 +269,11 @@ export default function Vetrina() {
        sale nella fascia alta con il testo sotto */
     const kx = 1 - Math.exp(-dt * 3)
     const bx = schermo.stretto ? 0 : 3.3
-    const by = (schermo.stretto ? scena.alto - 0.5 : -1.45)
+    /* Mezz'unità più in basso di prima: con l'ologramma salito a
+       un e cinquanta, il baricentro di quello che si guarda — la
+       sagoma, non la colonna — cade adesso al centro esatto
+       dell'inquadratura invece che nel terzo alto. */
+    const by = (schermo.stretto ? scena.alto - 1.1 : -1.95)
     gr.position.x += (bx - gr.position.x) * kx
     gr.position.y += (by - gr.position.y) * kx
     const bs = (schermo.stretto ? 0.62 : 1) * mescola(0.86, 1, presenza)
@@ -271,8 +318,12 @@ export default function Vetrina() {
       <mesh ref={alone} position={[0, 0.24, 0]} rotation={[-Math.PI / 2, 0, 0]} material={matAlone}>
         <circleGeometry args={[0.5, 32]} />
       </mesh>
-      {/* il fascio: un tronco di cono che si apre verso l'alto */}
-      <mesh ref={fascio} position={[0, 1.5, 0]} geometry={geoFascio} material={matFascio} />
+      {/* il fascio: un tronco di cono che si apre verso l'alto.
+          Parte da un quarto di unità sopra il cuscino — non da
+          dentro il cuscino, come faceva prima: la bocca sepolta
+          nella stoffa toglieva proprio il punto in cui si capisce
+          che la luce esce da lì. */}
+      <mesh ref={fascio} position={[0, 1.95, 0]} geometry={geoFascio} material={matFascio} />
 
       {/* ── l'ologramma ── */}
       <group ref={oggetto} visible={false}>

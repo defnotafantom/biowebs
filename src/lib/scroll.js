@@ -43,22 +43,52 @@ if (typeof window !== 'undefined') window.bio = { scroll, stato }
 
 let avviato = false
 
+/* Quanto in fretta la scena raggiunge la posizione vera del dito.
+   Era cinque e mezzo, cioè un ritardo di quasi due decimi: si
+   scorreva, e la figura arrivava dopo. Su un sito dove l'unica
+   cosa che accade È lo scorrimento, quel ritardo si legge come
+   "il sito non mi sta ascoltando".
+
+   Diciotto vuol dire cinquantacinque millesimi: tre fotogrammi.
+   Abbastanza da togliere lo scatto della rotellina — che salta di
+   cento pixel per volta e senza filtro farebbe sobbalzare la
+   scena — e abbastanza poco da sembrare attaccato al dito. */
+const INSEGUIMENTO = 18
+
+/* Sotto questa soglia si smette di inseguire e ci si mette esatti.
+   Senza, la differenza non arriva mai a zero e la scena continua a
+   correggersi di millesimi per sempre: invisibile, ma tiene sveglia
+   la scheda grafica anche a pagina ferma. */
+const FERMO = 0.0004
+
 export function avviaScroll() {
   if (avviato) return
   avviato = true
 
-  const leggi = () => {
-    scroll.grezzo = window.scrollY / Math.max(1, window.innerHeight)
-  }
-  leggi()
-  window.addEventListener('scroll', leggi, { passive: true })
-  window.addEventListener('resize', leggi)
+  scroll.grezzo = window.scrollY / Math.max(1, window.innerHeight)
+  scroll.schermate = scroll.grezzo
 
   let precedente = performance.now()
   const passo = (ora) => {
     const dt = Math.min(0.05, (ora - precedente) / 1000)
     precedente = ora
-    scroll.schermate += (scroll.grezzo - scroll.schermate) * (1 - Math.exp(-dt * 5.5))
+
+    /* La posizione si legge QUI, dentro il fotogramma, e non
+       nell'evento di scorrimento.
+
+       È la riga che cambia il tatto del sito. L'evento arriva
+       quando il browser ha voglia: su iOS, durante lo slancio del
+       dito, arriva a raffica e in ritardo, e a volte non arriva
+       affatto finché il dito non si stacca. scrollY invece è
+       sempre il valore vero dell'istante in cui stiamo per
+       disegnare — quindi la scena segue il dito e non gli eventi
+       che lo raccontano. */
+    scroll.grezzo = window.scrollY / Math.max(1, window.innerHeight)
+
+    const d = scroll.grezzo - scroll.schermate
+    if (Math.abs(d) < FERMO) scroll.schermate = scroll.grezzo
+    else scroll.schermate += d * (1 - Math.exp(-dt * INSEGUIMENTO))
+
     aggiorna()
     requestAnimationFrame(passo)
   }
